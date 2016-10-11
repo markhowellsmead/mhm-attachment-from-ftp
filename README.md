@@ -1,6 +1,8 @@
 # Attachments from FTP
 WordPress plugin. Watches a specified folder in your web hosting. If one or more new image files are added to the folder, 
-then a new Attachment Post will be created for each of them. This plugin uses the WordPress Cron API.
+then a new [Attachment](https://codex.wordpress.org/Attachments) will be created for each of them. 
+
+This plugin works using the WordPress Cron API.
 
 # Instructions
 Basic! Detailed instructions will follow soon. This plugin is in development and **MIGHT CAUSE ERRORS!!!** Don't use it yet unless you're helping me to debug it.
