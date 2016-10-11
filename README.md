@@ -10,8 +10,8 @@ Basic! Detailed instructions will follow soon. This plugin is in development and
 * Download the ZIP from this GitHub repository.
 * Upload it in wp-admin and activate it.
 * Create a direct subfolder in ``wp-content/uploads`` (or your equivalent) which the script will watch.
-* Choose this folder and the desired author in the plugin settings. (Settings » Attachments from FTP.)
-* Make sure that your server is accessing your Wordpress cron path. The folder will be checked once every hour by default.
+* Choose this folder and the desired author in the plugin settings. (*Settings » Attachments from FTP*.)
+* The plugin's function will be run once every hour by default. It works best if you ensure that a cron task is running on your server at least once per hour. [More information about WordPress cron](https://developer.wordpress.org/plugins/cron/).
 * If you want to run the check manually, you can use the [WP Crontrol](https://wordpress.org/plugins/wp-crontrol/) plugin. The hook name is ``mhm-attachment-from-ftp/check_folder``.
 
 ## Notes
