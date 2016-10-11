@@ -17,7 +17,7 @@ class Plugin
 {
     public $version = '0.1';
     public $wpversion = '4.5';
-    public $frequency = 'daily'; // Fixed. A filter is coming soon to allow customization.
+    public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
     private $sourceFolder = '';
     private $author_id = -1;
     private $allowed_file_types = array();
