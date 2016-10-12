@@ -33,7 +33,8 @@ As this plugin works with existing WordPress data in the database, and moves fil
 ## Plugin options
 * **Source folder**: the folder on the server which will be watched by the cron task for new image files.
 * **Post author**: the author in the website to whom new Attachments will be attributed.
-* **Do not overwrite**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
+* **Number of files to process**: how many images to process in a single batch. (See plugin options for futher details.)
+* **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
 
 ##Author
 Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
