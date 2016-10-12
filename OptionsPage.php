@@ -52,6 +52,15 @@ class OptionsPage
                     <p class="description">'.__('To which author should new attachments be attributed?', 'mhm_attachment_from_ftp').'</p>
                 </td>
             </tr>
+            <tr>
+                <th scope="row">'.__('Do not overwrite', 'mhm_attachment_from_ftp').'</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[no_overwrite_title_description]" value="1" '.checked((bool) $options['no_overwrite_title_description']).'>
+                        '.__('If this checkbox is selected, then titles and descriptions in existing Attachments will not be overwritten when importing newer versions of existing files.', 'mhm_attachment_from_ftp').'
+                    </p>
+                </td>
+            </tr>
         </table>';
 
         submit_button();

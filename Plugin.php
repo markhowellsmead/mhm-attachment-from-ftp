@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.1
+Version: 0.2
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -474,9 +474,28 @@ class Plugin
 
         if ($attachment_id) {
             /*
-             * Entry exists. Update it and re-generate thumbnails.
+             * Entry exists. Update it and re-generate thumbnails. Title and description are only upated if the
+             * appropriate blocking option “no_overwrite_title_description” is not activated in the plugin options.
              */
-            do_action('mhm-attachment-from-ftp/attachment_exists', $attachment_id);
+            $options = get_option('mhm_attachment_from_ftp');
+
+            if (!(bool) $options['no_overwrite_title_description']) {
+                $wp_filetype = wp_check_filetype(basename($target_path), null);
+                $info = pathinfo($target_path);
+                $attachment = array(
+                    'ID' => $attachment_id,
+                    'post_author' => $post_data['post_author'],
+                    'post_content' => $post_data['post_content'],
+                    'post_excerpt' => $post_data['post_content'],
+                    'post_mime_type' => $wp_filetype['type'],
+                    'post_name' => $info['filename'],
+                    'post_status' => 'inherit',
+                    'post_title' => $post_data['post_title'],
+                );
+                $attachment_id = wp_update_post($attachment);
+                do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
+            }
+            do_action('mhm-attachment-from-ftp/attachment_updated', $attachment_id);
             $this->thumbnailsAndMeta($attachment_id, $target_path);
         } else {
             /*
