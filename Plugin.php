@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.3
+Version: 0.3.1
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -15,7 +15,7 @@ use Wp_Query;
 
 class Plugin
 {
-    public $version = '0.3';
+    public $version = '0.3.1';
     public $wpversion = '4.5';
     public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
     private $sourceFolder = '';
