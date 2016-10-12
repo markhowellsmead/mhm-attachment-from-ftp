@@ -27,9 +27,14 @@ As this plugin works with existing WordPress data in the database, and moves fil
 ## Actions and filters
 ### Actions
 ``mhm-attachment-from-ftp/no_files``
-
-* Arguments: ``$source_folder``
+* Arguments: 
+    * Source folder (string)
 * Fires when there are no files in the selected folder.
+
+``mhm-attachment-from-ftp/no_file_date``
+* Arguments:
+    * Folder path (string)
+    * EXIF data (array)
 
 ## Notes
 * The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.)
