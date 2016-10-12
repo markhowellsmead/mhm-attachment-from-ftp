@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.2
+Version: 0.3
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -15,17 +15,20 @@ use Wp_Query;
 
 class Plugin
 {
-    public $version = '0.1';
+    public $version = '0.3';
     public $wpversion = '4.5';
     public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
     private $sourceFolder = '';
     private $author_id = -1;
     private $allowed_file_types = array();
+    private $options = array();
 
     public function __construct()
     {
         register_activation_hook(__FILE__, array($this, 'activation'));
         register_deactivation_hook(__FILE__, array($this, 'deactivation'));
+
+        $this->options = get_option('mhm_attachment_from_ftp');
 
         if (is_admin()) {
             require_once 'OptionsPage.php';
@@ -171,15 +174,21 @@ class Plugin
         // Handle older photos first, sorted by EXIF DateTime parameter.
         sort($entries);
 
-        $processed_entries = 0;
+        // Limit the amount of photos parsed in one run.
+        $option_files_per_batch = (int) $this->options['files_per_batch'];
+        $entries = array_slice($entries, 0, max($option_files_per_batch, 0), true);
 
-        foreach ($entries as $entry) {
-            $stored = (bool) $this->storeImage($entry);
+        if (count($entries)) {
+            $processed_entries = 0;
 
-            if ($stored) {
-                // Create or update existing Attachment Posts and generate thumbnails
-                $attachment_id = $this->handleAttachment($entry);
-                ++$number_of_entries;
+            foreach ($entries as $entry) {
+                $stored = (bool) $this->storeImage($entry);
+
+                if ($stored) {
+                    // Create or update existing Attachment Posts and generate thumbnails
+                    $attachment_id = $this->handleAttachment($entry);
+                    ++$number_of_entries;
+                }
             }
         }
 
@@ -255,14 +264,13 @@ class Plugin
      */
     public function setSourceFolder()
     {
-        $options = get_option('mhm_attachment_from_ftp');
         $upload_dir = wp_upload_dir();
-        $sourceFolder = esc_attr($options['source_folder']);
+        $sourceFolder = esc_attr($this->options['source_folder']);
 
         if (!$sourceFolder) {
             $this->sourceFolderUndefined();
         } else {
-            $this->sourceFolder = trailingslashit($upload_dir['basedir']).esc_attr($options['source_folder']);
+            $this->sourceFolder = trailingslashit($upload_dir['basedir']).esc_attr($this->options['source_folder']);
 
             if (!is_dir($this->sourceFolder)) {
                 @mkdir($this->sourceFolder, 0755, true);
@@ -278,8 +286,8 @@ class Plugin
      */
     public function setPostAuthor()
     {
-        $options = get_option('mhm_attachment_from_ftp');
-        $this->author_id = (int) $options['author_id'];
+        $this->options = get_option('mhm_attachment_from_ftp');
+        $this->author_id = (int) $this->options['author_id'];
 
         if (!$this->author_id) {
             $this->postAuthorUndefined();
@@ -477,9 +485,8 @@ class Plugin
              * Entry exists. Update it and re-generate thumbnails. Title and description are only upated if the
              * appropriate blocking option “no_overwrite_title_description” is not activated in the plugin options.
              */
-            $options = get_option('mhm_attachment_from_ftp');
 
-            if (!(bool) $options['no_overwrite_title_description']) {
+            if (!(bool) $this->options['no_overwrite_title_description']) {
                 $wp_filetype = wp_check_filetype(basename($target_path), null);
                 $info = pathinfo($target_path);
                 $attachment = array(

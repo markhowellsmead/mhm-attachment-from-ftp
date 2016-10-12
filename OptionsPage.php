@@ -53,6 +53,20 @@ class OptionsPage
                 </td>
             </tr>
             <tr>
+                <th scope="row">'.__('Number of files to process', 'mhm_attachment_from_ftp').'</th>
+                <td>
+                    <select name="mhm_attachment_from_ftp[files_per_batch]" id="files_per_batch">
+                        <option value="10"'.selected((int) $options['files_per_batch']).'>10</option>
+                        <option value="25"'.selected((int) $options['files_per_batch']).'>25</option>
+                        <option value="50"'.selected((int) $options['files_per_batch']).'>50</option>
+                        <option value="100"'.selected((int) $options['files_per_batch']).'>100</option>
+                    </select>
+                    <p class="description">'.__('The maximum number of files to process in a single batch. This number should be kept reasonably low unless you have a high-performance server.', 'mhm_attachment_from_ftp').'</p>
+                    <p class="description">'.__('The plugin re-generates thumbnails in several sizes each time it adds or updates an Attachment, which can require a little performance from the server.', 'mhm_attachment_from_ftp').'</p>
+                    <p class="description">'.__('If WordPress tries to process too many files in one go, then your server may experience memory issues.', 'mhm_attachment_from_ftp').'</p>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row">'.__('Do not overwrite', 'mhm_attachment_from_ftp').'</th>
                 <td>
                     <p class="description">
