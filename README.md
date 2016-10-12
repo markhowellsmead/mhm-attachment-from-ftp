@@ -4,16 +4,25 @@ WordPress plugin. Watches a specified folder in your web hosting. If one or more
 This plugin works using the WordPress Cron API.
 
 ## Instructions
-Basic! Detailed instructions will follow soon. This plugin is in development and **MIGHT CAUSE ERRORS!!!** Don't use it yet unless you're helping me to debug it.
+This plugin is in development and **MIGHT CAUSE ERRORS!!!** Don't use it yet unless you're helping me to debug it.
+
+Detailed instructions will be added as development progresses. The first official version of the plugin will be available directly from the WordPress plugin directory as soon as it is released.
 
 As this plugin works with existing WordPress data in the database, and moves files around on the server, make sure that you make a backup of your site and files before using it. Test it with a couple of files before you commit to using it for large numbers of files.
 
+## Installation and activation
 * Download the ZIP from this GitHub repository.
-* Upload it in wp-admin and activate it.
+* Upload the folder ``mhm-attachment-from-ftp`` to your plugin directory and activate the plugin in the WordPress Admin area.
 * Create a direct subfolder in ``wp-content/uploads`` (or your equivalent) which the script will watch.
 * Select this folder and the desired author in the plugin settings. (*Settings » Attachments from FTP*.)
 * The plugin's function will be run once every hour by default. It works best if you ensure that a cron task is running on your server at least once per hour. [More information about WordPress cron](https://developer.wordpress.org/plugins/cron/).
 * If you want to run the check manually, you can use the [WP Crontrol](https://wordpress.org/plugins/wp-crontrol/) plugin. The hook name is ``mhm-attachment-from-ftp/check_folder``.
+
+## Plugin options
+* **Source folder**: the folder on the server which will be watched by the cron task for new image files.
+* **Post author**: the author in the website to whom new Attachments will be attributed.
+* **Number of files to process**: how many images to process in a single batch. (See plugin options for futher details.)
+* **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
 
 ## Notes
 * The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.)
@@ -29,12 +38,6 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * This plugin doesn't create any additional images of its own.
 * If there is already an Attachment which refers to an image in precisely the same target location, then this entry will be updated and no new Attachment will be generated.
 * A pre-existing Attachment will be updated with the *Title* and *Caption* of the new image file. Any former, manually-edited caption or title will be overwritten unless the plugin option *Do not overwrite* is selected.
-
-## Plugin options
-* **Source folder**: the folder on the server which will be watched by the cron task for new image files.
-* **Post author**: the author in the website to whom new Attachments will be attributed.
-* **Number of files to process**: how many images to process in a single batch. (See plugin options for futher details.)
-* **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
 
 ##Author
 Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
