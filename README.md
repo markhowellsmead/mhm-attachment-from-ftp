@@ -24,6 +24,13 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * **Number of files to process**: how many images to process in a single batch. (See plugin options for futher details.)
 * **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
 
+## Actions and filters
+### Actions
+``mhm-attachment-from-ftp/no_files``
+
+* Arguments: ``$source_folder``
+* Fires when there are no files in the selected folder.
+
 ## Notes
 * The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.)
 * Uploaded files must contain regular EXIF data relating to capture date.
@@ -39,10 +46,10 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * If there is already an Attachment which refers to an image in precisely the same target location, then this entry will be updated and no new Attachment will be generated.
 * A pre-existing Attachment will be updated with the *Title* and *Caption* of the new image file. Any former, manually-edited caption or title will be overwritten unless the plugin option *Do not overwrite* is selected.
 
-##Author
+## Author
 Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
 
-##License
+## License
 Use this code freely, widely and for free. Provision of this code provides and implies no guarantee.
 
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
