@@ -10,6 +10,14 @@ Detailed instructions will be added as development progresses. The first officia
 
 As this plugin works with existing WordPress data in the database, and moves files around on the server, make sure that you make a backup of your site and files before using it. Test it with a couple of files before you commit to using it for large numbers of files.
 
+## What happens?
+Once the plugin is active and the plugin options are set, then the plugin uses WordPress' internal “cron” process to check a folder on your web server once per hour. If there are any images in the folder, then these are destined to become Attachment entries, which you can view in the *Media* section of WordPress admin and use in your Posts or Pages.
+
+So that a file can be correctly processed, the [EXIF data](https://photographylife.com/what-is-exif-data) needs to contain the original capture date and time of the photo. If you're uploading a normal photo, then this information is available. If you edit the photo in an image editing programme like Photoshop or Lightroom, then make sure that the export function doesn't remove the EXIF data. If you've given the photo a title and description in your image editing programme, this will be automatically added to the Attachment entry in WordPress.
+
+If you upload a photo which you've already added, for example after re-editing, with a new title or description, then the previous entry will be updated and the original file will be replaced. WordPress automatically creates smaller versions of each image, for use as a smaller version or as a thumbnail.
+
+
 ## Installation and activation
 * Download the ZIP from this GitHub repository.
 * Upload the folder ``mhm-attachment-from-ftp`` to your plugin directory and activate the plugin in the WordPress Admin area.
