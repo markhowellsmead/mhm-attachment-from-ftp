@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.3.4
+Version: 0.3.5
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -30,8 +30,10 @@ class Plugin
         $this->options = get_option('mhm_attachment_from_ftp');
 
         if (is_admin()) {
+            /**
+             * Load and initialize the configuration for the plugin's options page in wp-admin.
+             */
             require_once 'OptionsPage.php';
-            new OptionsPage();
         }
         $this->setThings();
 

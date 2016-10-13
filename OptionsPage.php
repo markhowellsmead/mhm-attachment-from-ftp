@@ -142,3 +142,5 @@ class OptionsPage
         return '<select name="'.$fieldname.'"><option value="">'.__('Select', 'frp_dataroom').'</option>'.implode('', $options).'</select>';
     }
 }
+
+new OptionsPage();
