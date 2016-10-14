@@ -83,7 +83,7 @@ class Plugin
     {
         $message = sprintf(
             __('The plugin “%1$s” requires WordPress %2$s or higher!', 'mhm-attachment-from-ftp'),
-            _x('Automatically publish photos', 'The name of the plugin', 'mhm-attachment-from-ftp'),
+            _x('Attachments from FTP', 'The name of the plugin', 'mhm-attachment-from-ftp'),
             $this->wpversion
         );
 
