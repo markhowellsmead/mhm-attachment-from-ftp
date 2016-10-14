@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.3.5
+Version: 0.3.6
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -308,6 +308,9 @@ class Plugin
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->sourceFolder), \RecursiveIteratorIterator::CHILD_FIRST);
         $out = array();
         foreach ($iterator as $path) {
+            if (!is_file($path) || strpos($path, '.DS_Store') !== false) {
+                continue;
+            }
             $filetype = wp_check_filetype($path);
             if (in_array($filetype['type'], $this->allowed_file_types)) {
                 $out[] = $path;
