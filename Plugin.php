@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.3.6.1
+Version: 0.3.7
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -388,7 +388,9 @@ class Plugin
                 return false;
             }
         }
-        $file_moved = @rename($post_data['source_path'], $post_data['target_path']);
+
+        $file_moved = $this->moveFile($post_data['source_path'], $post_data['target_path']);
+
         if ($file_moved) {
             do_action('mhm-attachment-from-ftp/file_moved', $post_data['source_path'], $post_data['target_path']);
         } else {
