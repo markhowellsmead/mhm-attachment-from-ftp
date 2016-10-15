@@ -557,7 +557,7 @@ class Plugin
 
         wp_update_attachment_metadata($post_id, $attach_data);
 
-        do_action('mhm-attachment-from-ftp/updated_attachment_metadata', $post_id, $path);
+        do_action('mhm-attachment-from-ftp/updated_attachment_metadata', $post_id, $path, $attach_data);
     }
 
     /**
