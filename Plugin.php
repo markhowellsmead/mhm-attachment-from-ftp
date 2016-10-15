@@ -6,7 +6,7 @@ Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.3.7
+Version: 0.3.8
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -508,8 +508,8 @@ class Plugin
                 $attachment_id = wp_update_post($attachment);
                 do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
             }
-            do_action('mhm-attachment-from-ftp/attachment_updated', $attachment_id);
             $this->thumbnailsAndMeta($attachment_id, $target_path);
+            do_action('mhm-attachment-from-ftp/attachment_updated', $attachment_id);
         } else {
             /*
              * Create new attachment entry and generate thumbnails.
@@ -526,8 +526,8 @@ class Plugin
                 'post_title' => $post_data['post_title'],
             );
             $attachment_id = wp_insert_attachment($attachment, $target_path);
-            do_action('mhm-attachment-from-ftp/attachment_created', $attachment_id);
             $this->thumbnailsAndMeta($attachment_id, $target_path);
+            do_action('mhm-attachment-from-ftp/attachment_created', $attachment_id);
         }
 
        /*
