@@ -56,22 +56,49 @@ class OptionsPage
                 <th scope="row">'.__('Number of files to process', 'mhm_attachment_from_ftp').'</th>
                 <td>
                     <select name="mhm_attachment_from_ftp[files_per_batch]" id="files_per_batch">
-                        <option value="10"'.selected((int) $options['files_per_batch']).'>10</option>
-                        <option value="25"'.selected((int) $options['files_per_batch']).'>25</option>
-                        <option value="50"'.selected((int) $options['files_per_batch']).'>50</option>
-                        <option value="100"'.selected((int) $options['files_per_batch']).'>100</option>
+                        <option value="10"'.selected((int) $options['files_per_batch'], 10, false).'>10</option>
+                        <option value="25"'.selected((int) $options['files_per_batch'], 25, false).'>25</option>
+                        <option value="50"'.selected((int) $options['files_per_batch'], 50, false).'>50</option>
+                        <option value="100"'.selected((int) $options['files_per_batch'], 100, false).'>100</option>
                     </select>
                     <p class="description">'.__('The maximum number of files to process in a single batch. This number should be kept reasonably low unless you have a high-performance server.', 'mhm_attachment_from_ftp').'</p>
                     <p class="description">'.__('The plugin re-generates thumbnails in several sizes each time it adds or updates an Attachment, which can require a little performance from the server.', 'mhm_attachment_from_ftp').'</p>
                     <p class="description">'.__('If WordPress tries to process too many files in one go, then your server may experience memory issues.', 'mhm_attachment_from_ftp').'</p>
                 </td>
             </tr>
-            <tr>
+            <tr valign="top">
                 <th scope="row">'.__('Do not overwrite existing titles or descriptions', 'mhm_attachment_from_ftp').'</th>
                 <td>
                     <p class="description">
                         <input type="checkbox" name="mhm_attachment_from_ftp[no_overwrite_title_description]" value="1" '.checked((bool) $options['no_overwrite_title_description'], true, false).'>
                         '.__('If this checkbox is selected, then titles and descriptions in existing Attachments will not be overwritten when importing newer versions of existing files.', 'mhm_attachment_from_ftp').'
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">'.__('Notify when an error occurs', 'mhm_attachment_from_ftp').'</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_error]" value="1" '.checked((bool) $options['notify_error'], true, false).' />
+                        '.__('If this checkbox is selected, the site administrator will receive an email when an error occurs during the import process.', 'mhm_attachment_from_ftp').'
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">'.__('Notify on success', 'mhm_attachment_from_ftp').'</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_success]" value="1" '.checked((bool) $options['notify_success'], true, false).' />
+                        '.__('If this checkbox is selected, the site administrator will receive an email when the import process is successful.', 'mhm_attachment_from_ftp').'
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">'.__('Notify on regular', 'mhm_attachment_from_ftp').'</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_regular]" value="1" '.checked((bool) $options['notify_regular'], true, false).' />
+                        '.__('If this checkbox is selected, the site administrator will receive an email for all actions within the import process.', 'mhm_attachment_from_ftp').'
                     </p>
                 </td>
             </tr>
