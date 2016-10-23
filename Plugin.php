@@ -165,6 +165,20 @@ class Plugin
                 'file_name' => $file->getFileName(),
                 'post_meta' => array(),
             );
+
+
+            /**
+             * Attachment posts do not receive post_meta by default, as the image's EXIF metadata is stored
+             * to the database using wp_generate_attachment_metadata. This is a temporary extension to allow
+             * the $entries array to contain this information, so that additional plugin mhm-attachment-from-ftp-publish
+             * can access it.
+             */
+            if (isset($exif['GPSLatitudeDecimal']) && isset($exif['GPSLongitudeDecimal']) && isset($exif['GPSCalculatedDecimal'])) {
+                $entries[strtotime($exif['DateTime'])]['post_meta']['geo_latitude'] = (float) $exif['GPSLatitudeDecimal'];
+                $entries[strtotime($exif['DateTime'])]['post_meta']['geo_longitude'] = (float) $exif['GPSLongitudeDecimal'];
+                $entries[strtotime($exif['DateTime'])]['post_meta']['location'] = (string) $exif['GPSCalculatedDecimal'];
+            }
+
         }
 
         if (empty($entries)) {
