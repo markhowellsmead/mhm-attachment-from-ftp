@@ -38,6 +38,7 @@ class Plugin
 		$this->setThings();
 
 		add_action('admin_init', array($this, 'checkVersion'));
+		add_action('admin_menu', [$this, 'adminListViewPage']);
 		add_action('mhm-attachment-from-ftp/check_folder', array($this, 'checkFolder'));
 		add_filter('wp_read_image_metadata', array($this, 'additionalImageMeta'), 10, 3);
 	}
@@ -687,6 +688,66 @@ class Plugin
 		}
 
 		return $exif;
+	}
+
+	private function pathToUrl($path)
+	{
+		$dirs = wp_upload_dir();
+		return str_replace($dirs['basedir'], $dirs['baseurl'], $path);
+	}
+
+	public function adminListViewPage()
+	{
+		add_submenu_page('upload.php', 'Images for import', 'For import', 'upload_files', 'importphotos', [$this, 'adminListView']);
+	}
+
+	public function adminListView()
+	{
+		$files = $this->getFiles();
+
+		if (empty($files)) {
+			echo '<p>No files</p>';
+		} else {
+			$file_html = [];
+			foreach ($files as $file) {
+				$file_path = $this->sanitizeFileName($file);
+				$file_url = $this->pathToUrl($file_path);
+				$exif = $this->buildEXIFArray($file_path, false);
+
+				$keywords = '<p>No keywords</p>';
+				if (!empty($exif['iptc']['keywords'])) {
+					$keywords = '<p><em>Keywords</em>: ' . implode(', ', array_values($exif['iptc']['keywords'])).'</p>';
+				}
+				$calculated_decimal = '<p>No location data</p>';
+				if (!empty($exif['GPSCalculatedDecimal'])) {
+					$calculated_decimal = '<p><em>GPSCalculatedDecimal</em>: ' . $exif['GPSCalculatedDecimal'].'</p>';
+				}
+
+				$make_model = '<p><em>Camera</em>: ' . implode(' ', [$exif['Make'], $exif['Model']]).'</p>';
+
+				$file_name = '<p>' . $file->getFileName().'</p>';
+
+				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><th scope="row" class="check-column"><input id="cb-select" type="checkbox" name="image[]" value="IMAGEID"></th><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$keywords.$calculated_decimal.$make_model.$file_name. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
+			}
+			printf(
+				'<div class="wrap">
+					<h1>%1$s</h1>
+					<table class="wp-list-table widefat fixed striped">
+						<thead><tr>
+							<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
+							<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
+							<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
+							<!--<th scope="col" id="exif" class="manage-column"><span>EXIF data</span></th>-->
+						</tr></thead>
+						<tbody id="the-list" class="ui-sortable">
+							%2$s
+						</tbody>
+					</table>
+				</div>',
+				get_admin_page_title(),
+				implode(chr(10), $file_html)
+			);
+		}
 	}
 }
 
