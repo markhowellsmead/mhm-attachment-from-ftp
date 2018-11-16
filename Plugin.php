@@ -803,6 +803,7 @@ class Plugin
 								<p><strong>' .$photo['title']. '</strong></p>
 								<p>Tags: '.implode(', ', $extradata['tags']).'</p>
 								<p>Location: '.implode(', ', $extradata['location']).'</p>
+								<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
 							</td>
 							<td>
 								<pre>' .print_r($photo, 1). '</pre>
@@ -867,6 +868,15 @@ class Plugin
 		//$response = curl_getinfo($curl_instance);
 		curl_close($curl_instance);
 		return $contents;
+	}
+
+	private function flickrEmbedUrl($data)
+	{
+		return sprintf(
+			'https://www.flickr.com/photos/%1$s/%2$s/',
+			$data['owner'],
+			$data['id']
+		);
 	}
 }
 
