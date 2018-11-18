@@ -42,6 +42,9 @@ class Plugin
 		add_action('admin_menu', [$this, 'adminListViewPage']);
 		add_action('mhm-attachment-from-ftp/check_folder', array($this, 'checkFolder'));
 		add_filter('wp_read_image_metadata', array($this, 'additionalImageMeta'), 10, 3);
+		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
+		add_action('rest_api_init', [$this, 'addMetaFields']);
+		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
 	}
 
 	public function activation()
@@ -738,7 +741,7 @@ class Plugin
 
 				$file_name = '<p>' . $file->getFileName().'</p>';
 
-				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><th scope="row" class="check-column"><input id="cb-select" type="checkbox" name="image[]" value="IMAGEID"></th><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$keywords.$calculated_decimal.$make_model.$file_name. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
+				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><th scope="row" class="check-column"><input type="checkbox" name="image[]" value="IMAGEID"></th><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$keywords.$calculated_decimal.$make_model.$file_name. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
 			}
 			printf(
 				'<div class="wrap">
@@ -794,7 +797,7 @@ class Plugin
 						$extradata = $this->getFlickrExtraData($photo['id']);
 						$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
 							<th scope="row" class="check-column">
-								<input id="cb-select" type="checkbox" name="image[]" value="' .$photo['id']. '">
+								<input type="checkbox" name="image[]" value="' .$photo['id']. '">
 							</th>
 							<td>
 								<img src="' .$photo['url_s']. '">
@@ -806,14 +809,32 @@ class Plugin
 								<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
 							</td>
 							<td>
-								<pre>' .print_r($photo, 1). '</pre>
+								<!--<pre>' .print_r($photo, 1). '</pre>-->
 							</td>
-						</tr>';
+						</tr>
+						<script>
+							posts_for_import["' .$photo['id']. '"] = {
+								title: "' .$photo['title'].'",
+								video_ref: "' .$this->flickrEmbedUrl($photo).'",
+								location: "'.implode(',', $extradata['location']).'",
+								meta: {
+									tags: ["'.implode('","', $extradata['tags']).'"]
+								},
+								slug: "' .$photo['id']. '",
+								author: ' .get_current_user_id(). ',
+								status: "publish"
+							};
+						</script>
+						';
 					}
 
 					printf(
 						'<div class="wrap">
 						<h1>%1$s</h1>
+						<script>
+						var posts_for_import = [];
+						</script>
+						<button class="button button-primary" data-import-from-flickr>Import</button>
 						<table class="wp-list-table widefat fixed striped">
 							<thead><tr>
 								<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
@@ -877,6 +898,78 @@ class Plugin
 			$data['owner'],
 			$data['id']
 		);
+	}
+
+	public function flickrScripts($hook)
+	{
+		if ($hook !== 'media_page_flickrphotos') {
+			return;
+		}
+		wp_enqueue_script('media_page_flickrphotos', plugins_url('assets/media_page_flickrphotos.js', __FILE__));
+		wp_localize_script('media_page_flickrphotos', 'mediaPageFlickrPhotos', [
+			'rest_url' => get_rest_url(),
+			'rest_nonce' => wp_create_nonce('wp_rest')
+		]);
+	}
+
+	public function addMetaFields()
+	{
+		register_rest_field('post', 'video_ref', array(
+			'get_callback' => function ($args) {
+				return get_post_meta($args['id'], 'video_ref', true);
+			},
+			'update_callback' => function ($value, $post) {
+				if (get_post_meta($post->ID, 'video_ref', true) === $value) {
+					return true;
+				}
+				if (!update_post_meta($post->ID, 'video_ref', $value)) {
+					return new \WP_Error(
+						'rest_comment_video_ref_failed',
+						__('Post ' .$post->ID. ' was not updated video_ref with value “' .$value. '”.'),
+						['status' => 500]
+					);
+				}
+				return true;
+			},
+			'schema' => array(
+				'description' => __('Video reference'),
+				'type'        => 'string'
+			),
+		));
+
+		register_rest_field('post', 'location', array(
+			'get_callback' => function ($args) {
+				return get_post_meta($args['id'], 'video_ref', true);
+			},
+			'update_callback' => function ($value, $post) {
+				if (get_post_meta($post->ID, 'location', true) === $value) {
+					return true;
+				}
+				if (!update_post_meta($post->ID, 'location', $value)) {
+					return new \WP_Error(
+						'rest_comment_location_failed',
+						__('Post ' .$post->ID. ' was not updated location with value “' .$value. '”.'),
+						['status' => 500]
+					);
+				}
+				return true;
+			},
+			'schema' => array(
+				'description' => __('Geographic location'),
+				'type'        => 'string'
+			),
+		));
+	}
+
+	public function maybeAddTerms($post, $request, $update = true)
+	{
+		$params = $request->get_params();
+		if (isset($params['meta']) && isset($params['meta']['tags']) && ! empty($params['meta']['tags'])) {
+			wp_set_object_terms($post->ID, $params['meta']['tags'], 'post_tag', $update);
+		}
+		if (isset($params['meta']) && isset($params['meta']['categories']) && ! empty($params['meta']['categories'])) {
+			wp_set_object_terms($post->ID, $params['meta']['categories'], 'category', $update);
+		}
 	}
 }
 
