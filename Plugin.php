@@ -774,27 +774,45 @@ class Plugin
 
 		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
 			//$upload_dir = wp_upload_dir();
-			$per_page = 20;
+			$per_page = 100;
 
-			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=o_dims,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&per_page='.$per_page;
+			if (isset($_GET['pagenumber'])) {
+				$pagenumber = (int)$_GET['pagenumber'];
+			} else {
+				$pagenumber = 1;
+			}
+
+			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&page=' .$pagenumber. '&per_page='.$per_page;
 
 			$out=array();
 
 			if (($image_data=$this->getRemoteFileContents($FlickrRequestString))) {
-				$images = json_decode($image_data, true);
-				if ($images['stat']=='ok') {
-					$photoset=array();
+				$data = json_decode($image_data, true);
 
-					foreach ($images['photos']['photo'] as $photo) {
-						if (isset($photo['id'])) {
-							$photoset[] = $photo;
-						}
+				$page_list = '<ul class="inline">';
+				for ($page=1; $page <= $data['photos']['pages']; $page++) {
+					if ($page === $data['photos']['page']) {
+						$page_list .='<li><strong>'.$page.'</strong></li>';
+					} else {
+						$page_list .='<li><a href="/wp-admin/upload.php?page=flickrphotos&pagenumber=' .$page. '">'.$page.'</a></li>';
 					}
+				}
+				$page_list .= '</ul>';
 
-					$out = [];
+				echo $page_list;
 
-					foreach ($photoset as $photo) {
+				if ($data['stat']=='ok') {
+					foreach ($data['photos']['photo'] as $photo) {
 						$extradata = $this->getFlickrExtraData($photo['id']);
+
+						$description = isset($photo['description']) && isset($photo['description']['_content']) ? str_replace('"', "'", $photo['description']['_content']) : '';
+
+						if ((int)$photo['datetakenunknown'] || !$photo['datetaken']) {
+							$date = date('Y-m-d H:i:s', $photo['dateupload']);
+						} else {
+							$date = date('Y-m-d H:i:s', strtotime($photo['datetaken']));
+						}
+
 						$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
 							<th scope="row" class="check-column">
 								<input type="checkbox" name="image[]" value="' .$photo['id']. '">
@@ -814,7 +832,9 @@ class Plugin
 						</tr>
 						<script>
 							posts_for_import["' .$photo['id']. '"] = {
-								title: "' .$photo['title'].'",
+								title: "' .(empty($photo['title'])? 'Untitled': str_replace('"', "'", $photo['title'])).'",
+								content: "' .$description.'",
+								date: "' .$date. '",
 								video_ref: "' .$this->flickrEmbedUrl($photo).'",
 								location: "'.implode(',', $extradata['location']).'",
 								meta: {
@@ -861,8 +881,8 @@ class Plugin
 		$data = $this->getRemoteFileContents($url);
 		$data = json_decode($data, true);
 		$out = [];
+		$out['tags'] = [];
 		if (isset($data['photo']) && isset($data['photo']['tags']) && is_array($data['photo']['tags']['tag']) && !empty($data['photo']['tags']['tag'])) {
-			$out['tags'] = [];
 			foreach ($data['photo']['tags']['tag'] as $tag) {
 				if (isset($tag['raw'])) {
 					$out['tags'][] = $tag['raw'];
@@ -905,6 +925,7 @@ class Plugin
 		if ($hook !== 'media_page_flickrphotos') {
 			return;
 		}
+		wp_enqueue_style('media_page_flickrphotos', plugins_url('assets/media_page_flickrphotos.css', __FILE__));
 		wp_enqueue_script('media_page_flickrphotos', plugins_url('assets/media_page_flickrphotos.js', __FILE__));
 		wp_localize_script('media_page_flickrphotos', 'mediaPageFlickrPhotos', [
 			'rest_url' => get_rest_url(),
