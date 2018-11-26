@@ -829,7 +829,7 @@ class Plugin
 			if (isset($_GET['pagenumber'])) {
 				$pagenumber = (int)$_GET['pagenumber'];
 			} else {
-				$pagenumber = 1;
+				$pagenumber = 0;
 			}
 
 			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&page=' .$pagenumber. '&per_page='.$per_page;
@@ -840,7 +840,7 @@ class Plugin
 				$data = json_decode($image_data, true);
 
 				$page_list = '<ul class="inline">';
-				for ($page=1; $page <= $data['photos']['pages']; $page++) {
+				for ($page=0; $page <= $data['photos']['pages']; $page++) {
 					if ($page === $data['photos']['page']) {
 						$page_list .='<li><strong>'.$page.'</strong></li>';
 					} else {
@@ -851,61 +851,63 @@ class Plugin
 
 				echo $page_list;
 
-				if ($data['stat']=='ok') {
-					foreach ($data['photos']['photo'] as $photo) {
-						$photo['extradata'] = $this->getFlickrExtraData($photo['id']);
+				if ($pagenumber>0) {
+					if ($data['stat']=='ok') {
+						foreach ($data['photos']['photo'] as $photo) {
+							$photo['extradata'] = $this->getFlickrExtraData($photo['id']);
 
-						// if ((int)$photo['datetakenunknown'] || !$photo['datetaken']) {
-						// 	$date = date('Y-m-d H:i:s', $photo['dateupload']);
-						// } else {
-						// 	$date = date('Y-m-d H:i:s', strtotime($photo['datetaken']));
-						// }
+							// if ((int)$photo['datetakenunknown'] || !$photo['datetaken']) {
+							// 	$date = date('Y-m-d H:i:s', $photo['dateupload']);
+							// } else {
+							// 	$date = date('Y-m-d H:i:s', strtotime($photo['datetaken']));
+							// }
 
-						$post_link = $this->postLink($photo);
+							$post_link = $this->postLink($photo);
 
-						$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
-							<th scope="row" class="check-column">
-								<input type="checkbox" name="image[]" value="' .$photo['id']. '">
-							</th>
-							<td>
-								<img src="' .$photo['url_s']. '">
-							</td>
-							<td>
-								<p><strong>' .$photo['title']. '</strong></p>
-								<p>Tags: '.implode(', ', $photo['extradata']['tags']).'</p>
-								<p>Location: '.implode(', ', $photo['extradata']['location']).'</p>
-								<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
-								<p>Post URL: <a href="' .$post_link. '">' .$post_link. '</a></p>
-							</td>
-							<td>
-								<!--<pre>' .print_r($photo, 1). '</pre>-->
-							</td>
-						</tr>
-						';
+							$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
+								<th scope="row" class="check-column">
+									<input type="checkbox" name="image[]" value="' .$photo['id']. '">
+								</th>
+								<td>
+									<img src="' .$photo['url_s']. '">
+								</td>
+								<td>
+									<p><strong>' .$photo['title']. '</strong></p>
+									<p>Tags: '.implode(', ', $photo['extradata']['tags']).'</p>
+									<p>Location: '.implode(', ', $photo['extradata']['location']).'</p>
+									<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
+									<p>Post URL: <a href="' .$post_link. '">' .$post_link. '</a></p>
+								</td>
+								<td>
+									<!--<pre>' .print_r($photo, 1). '</pre>-->
+								</td>
+							</tr>
+							';
+						}
+
+						printf(
+							'<div class="wrap">
+							<h1>%1$s</h1>
+							<script>
+							var posts_for_import = [];
+							</script>
+							<button class="button button-primary" data-import-from-flickr>Import</button>
+							<table class="wp-list-table widefat fixed striped">
+								<thead><tr>
+									<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
+									<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
+									<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
+									<th scope="col" id="exif" class="manage-column"><span>All data</span></th>
+								</tr></thead>
+								<tbody id="the-list" class="ui-sortable">
+									%2$s
+								</tbody>
+							</table>
+						</div>',
+							get_admin_page_title(),
+							implode(chr(10), $out)
+						);
 					}
-
-					printf(
-						'<div class="wrap">
-						<h1>%1$s</h1>
-						<script>
-						var posts_for_import = [];
-						</script>
-						<button class="button button-primary" data-import-from-flickr>Import</button>
-						<table class="wp-list-table widefat fixed striped">
-							<thead><tr>
-								<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
-								<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
-								<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
-								<th scope="col" id="exif" class="manage-column"><span>All data</span></th>
-							</tr></thead>
-							<tbody id="the-list" class="ui-sortable">
-								%2$s
-							</tbody>
-						</table>
-					</div>',
-						get_admin_page_title(),
-						implode(chr(10), $out)
-					);
 				}
 			}
 		}
