@@ -939,13 +939,16 @@ class Plugin
 
 	private function getRemoteFileContents($url)
 	{
-		$curl_instance = curl_init();
-		curl_setopt($curl_instance, CURLOPT_URL, $url);
-		curl_setopt($curl_instance, CURLOPT_CONNECTTIMEOUT, 1);
-		curl_setopt($curl_instance, CURLOPT_RETURNTRANSFER, 1);
-		$contents = curl_exec($curl_instance);
-		//$response = curl_getinfo($curl_instance);
-		curl_close($curl_instance);
+		if (false === ( $contents = get_transient('flickr_'.md5($url)) )) {
+			$curl_instance = curl_init();
+			curl_setopt($curl_instance, CURLOPT_URL, $url);
+			curl_setopt($curl_instance, CURLOPT_CONNECTTIMEOUT, 1);
+			curl_setopt($curl_instance, CURLOPT_RETURNTRANSFER, 1);
+			$contents = curl_exec($curl_instance);
+			//$response = curl_getinfo($curl_instance);
+			curl_close($curl_instance);
+			set_transient('flickr_'.md5($url), $contents, HOUR_IN_SECONDS);
+		}
 		return $contents;
 	}
 
