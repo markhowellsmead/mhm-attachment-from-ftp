@@ -367,10 +367,12 @@ class Plugin
 
 		if (in_array($sourceImageType, $image_file_types) && function_exists('iptcparse')) {
 			getimagesize($file, $info);
-			$iptc = iptcparse($info['APP13']);
-			if ($iptc) {
-				$meta['category'] = $iptc['2#015'];
-				$meta['keywords'] = $iptc['2#025'];
+			if (isset($info['APP13'])) {
+				$iptc = iptcparse($info['APP13']);
+				if ($iptc && isset($iptc['2#015'])) {
+					$meta['category'] = $iptc['2#015'];
+					$meta['keywords'] = $iptc['2#025'];
+				}
 			}
 		}
 
