@@ -11,7 +11,7 @@ Version: 0.4.2
 
 namespace MHM\WordPress\AttachmentFromFtp;
 
-use Wp_Query;
+use WP_Query;
 
 class Plugin
 {
