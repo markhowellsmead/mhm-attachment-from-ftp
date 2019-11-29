@@ -2,11 +2,11 @@
 /*
 Plugin Name: Import from folder
 Description: Create attachment posts from files in a folder on the server.
-Plugin URI: #
+Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.4.2
+Version: 0.4.3
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -15,7 +15,7 @@ use WP_Query;
 
 class Plugin
 {
-	public $wpversion = '4.5';
+	public $wpversion = '5.3';
 	public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
 	private $sourceFolder = '';
 	private $author_id = -1;
