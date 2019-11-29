@@ -1,7 +1,7 @@
 <?php
 /*
-Plugin Name: Attachments from FTP
-Description: Watches a specified folder in your web hosting. If a new image file is added, then a new Attachment Post will be created. This plugin uses the WordPress Cron API.
+Plugin Name: Import from folder
+Description: Create attachment posts from files in a folder on the server.
 Plugin URI: #
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
