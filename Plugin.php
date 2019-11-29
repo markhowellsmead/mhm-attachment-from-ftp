@@ -626,11 +626,19 @@ class Plugin
 
 		if (isset($exif['GPSLatitude'])) {
 			$GPS['lat']['deg'] = explode('/', $exif['GPSLatitude'][0]);
-			$GPS['lat']['deg'] = $GPS['lat']['deg'][0] / $GPS['lat']['deg'][1];
+			$GPS['lat']['deg'] = $GPS['lat']['deg'][1] > 0 ? $GPS['lat']['deg'][0] / $GPS['lat']['deg'][1] : 0;
 			$GPS['lat']['min'] = explode('/', $exif['GPSLatitude'][1]);
-			$GPS['lat']['min'] = $GPS['lat']['min'][0] / $GPS['lat']['min'][1];
+			$GPS['lat']['min'] = $GPS['lat']['min'][1] > 0 ? $GPS['lat']['min'][0] / $GPS['lat']['min'][1] : 0;
 			$GPS['lat']['sec'] = explode('/', $exif['GPSLatitude'][2]);
-			$GPS['lat']['sec'] = $GPS['lat']['sec'][1] !== 0 ? floatval($GPS['lat']['sec'][0]) / floatval($GPS['lat']['sec'][1]) : 0;
+
+			$lat_sec_0 = floatval($GPS['lat']['sec'][0]);
+			$lat_sec_1 = floatval($GPS['lat']['sec'][1]);
+
+			if ($lat_sec_0 > 0 && $lat_sec_1 > 0) {
+				$GPS['lat']['sec'] = $lat_sec_0 / $lat_sec_1;
+			} else {
+				$GPS['lat']['sec'] = 0;
+			}
 
 			$exif['GPSLatitudeDecimal'] = self::DMStoDEC($GPS['lat']['deg'], $GPS['lat']['min'], $GPS['lat']['sec']);
 			if ($exif['GPSLatitudeRef'] == 'S') {
@@ -643,11 +651,19 @@ class Plugin
 
 		if (isset($exif['GPSLongitude'])) {
 			$GPS['lon']['deg'] = explode('/', $exif['GPSLongitude'][0]);
-			$GPS['lon']['deg'] = $GPS['lon']['deg'][0] / $GPS['lon']['deg'][1];
+			$GPS['lon']['deg'] = $GPS['lon']['deg'][1] > 0 ? $GPS['lon']['deg'][0] / $GPS['lon']['deg'][1] : 0;
 			$GPS['lon']['min'] = explode('/', $exif['GPSLongitude'][1]);
-			$GPS['lon']['min'] = $GPS['lon']['min'][0] / $GPS['lon']['min'][1];
+			$GPS['lon']['min'] = $GPS['lon']['min'][1] > 0 ? $GPS['lon']['min'][0] / $GPS['lon']['min'][1] : 0;
 			$GPS['lon']['sec'] = explode('/', $exif['GPSLongitude'][2]);
-			$GPS['lon']['sec'] = $GPS['lon']['sec'][1] !== 0 ? floatval($GPS['lon']['sec'][0]) / floatval($GPS['lon']['sec'][1]) : 0;
+
+			$lon_sec_0 = floatval($GPS['lon']['sec'][0]);
+			$lon_sec_1 = floatval($GPS['lon']['sec'][1]);
+
+			if ($lon_sec_0 > 0 && $lon_sec_1 > 0) {
+				$GPS['lon']['sec'] = $lon_sec_0 / $lon_sec_1;
+			} else {
+				$GPS['lon']['sec'] = 0;
+			}
 
 			$exif['GPSLongitudeDecimal'] = $this->DMStoDEC($GPS['lon']['deg'], $GPS['lon']['min'], $GPS['lon']['sec']);
 			if ($exif['GPSLongitudeRef'] == 'W') {
