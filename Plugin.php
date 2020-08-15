@@ -44,12 +44,20 @@ class Plugin
 		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
 	}
 
-	private function debug($title, $content = '')
+	private function error_log($title, $content = '')
 	{
 		if (is_array($content)) {
 			$content = print_r($content, 1);
 		}
-		error_log($title.chr(9).$content.chr(10), 0);
+		error_log(date('r').chr(9).$title.chr(9).$content.chr(10), 3, WP_CONTENT_DIR.'/mhm_attachment_from_ftp.error.log');
+	}
+
+	private function success_log($title, $content = '')
+	{
+		if (is_array($content)) {
+			$content = print_r($content, 1);
+		}
+		error_log(date('r').chr(9).$title.chr(9).$content.chr(10), 3, WP_CONTENT_DIR.'/mhm_attachment_from_ftp.success.log');
 	}
 
 	public function activation()
@@ -160,11 +168,13 @@ class Plugin
 				 * can currently be processed.
 				 */
 				do_action('mhm-attachment-from-ftp/no_file_date', $file_path, $exif);
+				$this->error_log('mhm-attachment-from-ftp/no_file_date', [$file_path, $exif]);
 				continue;
 			}
 
 			if ($filesize = round(filesize($file_path) / 1024 / 1024) > 10) {
 				do_action('mhm-attachment-from-ftp/too_big', $file_path, $filesize.' Mb');
+				$this->error_log('mhm-attachment-from-ftp/too_big', [$file_path, $filesize.' Mb']);
 				continue;
 			}
 
@@ -200,6 +210,7 @@ class Plugin
 
 		if (empty($entries)) {
 			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->basePath, $files);
+			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->basePath, $files]);
 			exit;
 		}
 
@@ -225,6 +236,7 @@ class Plugin
 		}
 
 		do_action('mhm-attachment-from-ftp/finished', $entries, $processed_entries);
+		$this->success_log('mhm-attachment-from-ftp/finished', [$entries, $processed_entries]);
 	}
 
 	/**
@@ -248,6 +260,7 @@ class Plugin
 			printf('<div class="%1$s"><p>%2$s</p></div>', $class, $message);
 		});
 		do_action('mhm-attachment-from-ftp/source-folder-undefined', $this->sourceFolder);
+		$this->error_log('mhm-attachment-from-ftp/source-folder-undefined', $this->sourceFolder);
 	}
 
 	/**
@@ -271,6 +284,7 @@ class Plugin
 			printf('<div class="%1$s"><p>%2$s</p></div>', $class, $message);
 		});
 		do_action('mhm-attachment-from-ftp/post-author-undefined', $this->sourceFolder);
+		$this->error_log('mhm-attachment-from-ftp/post-author-undefined', $this->settings);
 	}
 
 	private function setAllowedFileTypes()
@@ -308,6 +322,7 @@ class Plugin
 				@mkdir($this->sourceFolder, 0755, true);
 				if (is_dir($this->sourceFolder)) {
 					do_action('mhm-attachment-from-ftp/source-folder-unavailable', $this->sourceFolder);
+					$this->error_log('mhm-attachment-from-ftp/source-folder-unavailable', $this->sourceFolder);
 				}
 			}
 		}
@@ -347,6 +362,7 @@ class Plugin
 				$out[] = $path;
 			} else {
 				do_action('mhm-attachment-from-ftp/filetype-not-allowed', $path, $filetype['type'], $this->allowed_file_types);
+				$this->error_log('mhm-attachment-from-ftp/filetype-not-allowed', [$path, $filetype, $this->allowed_file_types]);
 			}
 		}
 
@@ -417,7 +433,7 @@ class Plugin
 			@mkdir($post_data['target_folder'], 0755, true);
 			if (!is_dir($post_data['target_folder'])) {
 				do_action('mhm-attachment-from-ftp/target_folder_missing', $post_data['target_folder']);
-
+				$this->error_log('mhm-attachment-from-ftp/target_folder_missing', $post_data);
 				return false;
 			}
 		}
@@ -428,6 +444,7 @@ class Plugin
 			do_action('mhm-attachment-from-ftp/file_moved', $post_data['source_path'], $post_data['target_path']);
 		} else {
 			do_action('mhm-attachment-from-ftp/file_not_moved', $post_data['source_path'], $post_data['target_path']);
+			$this->error_log('mhm-attachment-from-ftp/file_not_moved', [$post_data['source_path'], $post_data['target_path']]);
 		}
 
 		return $file_moved;
@@ -538,9 +555,11 @@ class Plugin
 				];
 				$attachment_id = wp_update_post($attachment);
 				do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
+				$this->success_log('mhm-attachment-from-ftp/title_description_overwritten', [$attachment_id, $attachment]);
 			}
 			$this->thumbnailsAndMeta($attachment_id, $target_path);
 			do_action('mhm-attachment-from-ftp/attachment_updated', $attachment_id);
+			$this->success_log('mhm-attachment-from-ftp/attachment_updates', [$attachment_id]);
 		} else {
 			/*
 			 * Create new attachment entry and generate thumbnails.
@@ -559,6 +578,7 @@ class Plugin
 			$attachment_id = wp_insert_attachment($attachment, $target_path);
 			$this->thumbnailsAndMeta($attachment_id, $target_path);
 			do_action('mhm-attachment-from-ftp/attachment_created', $attachment_id);
+			$this->success_log('mhm-attachment-from-ftp/attachment_created', [$attachment_id]);
 		}
 
 		/*
@@ -587,6 +607,7 @@ class Plugin
 		wp_update_attachment_metadata($post_id, $attach_data);
 
 		do_action('mhm-attachment-from-ftp/updated_attachment_metadata', $post_id, $path, $attach_data);
+		$this->success_log('mhm-attachment-from-ftp/updated_attachment_metadata', [$post_id, $path, $attach_data]);
 	}
 
 	/**
