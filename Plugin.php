@@ -40,6 +40,7 @@ class Plugin
 
 		add_action('admin_init', [$this, 'checkVersion']);
 		add_action('admin_menu', [$this, 'adminListViewPages']);
+		add_filter('cron_schedules', [$this, 'cronInterval']);
 		add_action('mhm-attachment-from-ftp/check_folder', [$this, 'checkFolder']);
 		add_filter('wp_read_image_metadata', [$this, 'additionalImageMeta'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
@@ -97,6 +98,17 @@ class Plugin
 		}
 
 		return true;
+	}
+
+	public function cronInterval()
+	{
+		if (!isset($schedules['two_minutes'])) {
+			$schedules['two_minutes'] = [
+				'interval' => 120,
+				'display' => __('Every two minutes')
+			];
+		}
+		return $schedules;
 	}
 
 	private function sanitizeFileName($file)
