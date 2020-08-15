@@ -1,5 +1,5 @@
 # Attachments from FTP
-WordPress plugin. Watches a specified folder in your web hosting. If one or more new image files are added to the folder, then a new [Attachment](https://codex.wordpress.org/Attachments) will be created for each of them. 
+WordPress plugin. Watches a specified folder in your web hosting. If one or more new image files are added to the folder, then a new [Attachment](https://codex.wordpress.org/Attachments) will be created for each of them.
 
 This plugin works using the WordPress Cron API.
 
@@ -50,82 +50,87 @@ If you upload a photo which you've already added, for example after re-editing, 
 ## Actions and filters
 ### Actions
 ``mhm-attachment-from-ftp/no_files`` fires when there are no files in the folder.
-* Arguments: 
-    * Source folder (string)
+* Arguments:
+	* Source folder (string)
 
 ``mhm-attachment-from-ftp/no_file_date`` fires when the selected file has no creation date available in its EXIF data.
 * Arguments:
-    * File path (string)
-    * EXIF data (array)
+	* File path (string)
+	* EXIF data (array)
 
 ``mhm-attachment-from-ftp/no_valid_entries`` fires when there are no valid files in the folder.
-* Arguments: 
-    * Folder path (string)
-    * Files (array)
+* Arguments:
+	* Folder path (string)
+	* Files (array)
 
 ``mhm-attachment-from-ftp/finished`` fires when the process has completely finished.
 * Arguments:
-    * Files (array)
-    * Processed files (array)
+	* Files (array)
+	* Processed files (array)
 
 ``mhm-attachment-from-ftp/source-folder-undefined`` fires when the source folder is not defined.
-* Arguments: 
-    * Source folder (string)
+* Arguments:
+	* Source folder (string)
 
 ``mhm-attachment-from-ftp/post-author-undefined`` fires when the post author has not been correctly defined.
-* Arguments: 
-    * Post author (integer)
+* Arguments:
+	* Post author (integer)
 
 ``mhm-attachment-from-ftp/source-folder-unavailable`` fires when the indicated source folder is not available on the server.
 * Arguments:
-    * Folder path (string)
+	* Folder path (string)
 
 ``mhm-attachment-from-ftp/filetype-not-allowed`` fires when a file has a MIME type which is not in the ``allowed_file_types`` array.
 * Arguments:
-    * File path (string)
-    * The MIME type of the file (string)
-    * The array of allowed file types. (array)
+	* File path (string)
+	* The MIME type of the file (string)
+	* The array of allowed file types. (array)
 
 ``mhm-attachment-from-ftp/target_folder_missing`` fires when the target directory, to which a file is to be moved, does not exist.
 * Arguments:
-    * Folder path (string)
+	* Folder path (string)
 
 ``mhm-attachment-from-ftp/file_moved`` fires after a file is successfully moved.
 * Arguments:
-    * Source path (string)
-    * Target path (string)
+	* Source path (string)
+	* Target path (string)
 
 ``mhm-attachment-from-ftp/file_not_moved`` fires after a file cannot be successfully moved.
 * Arguments:
-    * Source path (string)
-    * Target path (string)
+	* Source path (string)
+	* Target path (string)
 
 ``mhm-attachment-from-ftp/title_description_overwritten`` fires when the title and description of a pre-existing Attachment have been replaced.
 * Arguments:
-    * Attachment ID (integer)
-    * New Attachment data (array)
+	* Attachment ID (integer)
+	* New Attachment data (array)
 
 ``mhm-attachment-from-ftp/attachment_updated`` fires when an Attachment has been updated in the database.
 * Arguments:
-    * Attachment ID (integer)
+	* Attachment ID (integer)
 
 ``mhm-attachment-from-ftp/attachment_created`` fires when an Attachment has been created in the database.
 * Arguments:
-    * Attachment ID (integer)
+	* Attachment ID (integer)
 
 ``mhm-attachment-from-ftp/updated_attachment_metadata`` fires when the metadata from the Attachment has been updated in the database.
 * Arguments:
-    * Attachment ID (integer)
-    * File path (string)
+	* Attachment ID (integer)
+	* File path (string)
+
+``mhm-attachment-from-ftp/too_big`` fires if a source file is too large. The current limit is 10Mb. This is in order to avoid massive files killing server resources.
+* Arguments:
+	* File path (string)
+	* File size descriptor (string)
 
 ### Filters
 ``mhm-attachment-from-ftp/files-in-folder``
 * Arguments:
-    * Files in the folder (array)
+	* Files in the folder (array)
 
-``mhm-attachment-from-ftp/allowed-file-types`` 
+``mhm-attachment-from-ftp/allowed-file-types``
 * Arguments:
-    * Array of allowed file types (array)
+	* Array of allowed file types (array)
 
 ## Author
 Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
