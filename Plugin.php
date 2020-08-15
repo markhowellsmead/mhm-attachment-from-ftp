@@ -1,26 +1,27 @@
 <?php
 /*
-Plugin Name: Attachments from FTP
-Description: Watches a specified folder in your web hosting. If a new image file is added, then a new Attachment Post will be created. This plugin uses the WordPress Cron API.
-Plugin URI: #
+Plugin Name: Import from folder
+Description: Create attachment posts from files in a folder on the server.
+Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.4.2
+Version: 0.4.3
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
 
-use Wp_Query;
+use WP_Query;
 
 class Plugin
 {
-	public $wpversion = '4.5';
+	public $wpversion = '5.3';
 	public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
 	private $sourceFolder = '';
 	private $author_id = -1;
 	private $allowed_file_types = array();
 	private $options = array();
+	private $flickr_config = [];
 
 	public function __construct()
 	{
@@ -38,8 +39,12 @@ class Plugin
 		$this->setThings();
 
 		add_action('admin_init', array($this, 'checkVersion'));
+		add_action('admin_menu', [$this, 'adminListViewPages']);
 		add_action('mhm-attachment-from-ftp/check_folder', array($this, 'checkFolder'));
 		add_filter('wp_read_image_metadata', array($this, 'additionalImageMeta'), 10, 3);
+		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
+		add_action('rest_api_init', [$this, 'addMetaFields']);
+		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
 	}
 
 	public function activation()
@@ -145,17 +150,17 @@ class Plugin
 			$target_folder = $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
 			$entries[strtotime($exif['DateTime'])] = array(
-				'post_author' => $this->author_id,
-				'post_type' => $this->post_type,
-				'post_title' => (string) $exif['iptc']['graphic_name'],
-				'post_content' => (string) $exif['iptc']['caption'],
-				'post_tags' => $exif['iptc']['keywords'],
-				'file_date' => $exif['DateTimeOriginal'],
-				'source_path' => $file_path,
-				'target_path' => $target_folder.$file->getFileName(),
-				'target_folder' => $target_folder,
-				'file_name' => $file->getFileName(),
-				'post_meta' => array(),
+			'post_author' => $this->author_id,
+			'post_type' => $this->post_type,
+			'post_title' => (string) $exif['iptc']['graphic_name'],
+			'post_content' => (string) $exif['iptc']['caption'],
+			'post_tags' => $exif['iptc']['keywords'],
+			'file_date' => $exif['DateTimeOriginal'],
+			'source_path' => $file_path,
+			'target_path' => $target_folder.$file->getFileName(),
+			'target_folder' => $target_folder,
+			'file_name' => $file->getFileName(),
+			'post_meta' => array(),
 			);
 
 
@@ -250,11 +255,11 @@ class Plugin
 	private function setAllowedFileTypes()
 	{
 		$this->allowed_file_types = apply_filters('mhm-attachment-from-ftp/allowed-file-types', array(
-			'image/jpeg',
-			'image/gif',
-			'image/png',
-			'image/bmp',
-			'image/tiff',
+		'image/jpeg',
+		'image/gif',
+		'image/png',
+		'image/bmp',
+		'image/tiff',
 		));
 	}
 
@@ -362,10 +367,12 @@ class Plugin
 
 		if (in_array($sourceImageType, $image_file_types) && function_exists('iptcparse')) {
 			getimagesize($file, $info);
-			$iptc = iptcparse($info['APP13']);
-			if ($iptc) {
-				$meta['category'] = $iptc['2#015'];
-				$meta['keywords'] = $iptc['2#025'];
+			if (isset($info['APP13'])) {
+				$iptc = iptcparse($info['APP13']);
+				if ($iptc && isset($iptc['2#015'])) {
+					$meta['category'] = $iptc['2#015'];
+					$meta['keywords'] = $iptc['2#025'];
+				}
 			}
 		}
 
@@ -448,16 +455,16 @@ class Plugin
 		if (false !== strpos($path, $dir['basedir'].'/')) {
 			$file = basename($path);
 			$query_args = array(
-				'post_type' => 'attachment',
-				'post_status' => 'inherit',
-				'fields' => 'ids',
-				'meta_query' => array(
-					array(
-						'value' => $file,
-						'compare' => 'LIKE',
-						'key' => '_wp_attachment_metadata',
-					),
+			'post_type' => 'attachment',
+			'post_status' => 'inherit',
+			'fields' => 'ids',
+			'meta_query' => array(
+				array(
+					'value' => $file,
+					'compare' => 'LIKE',
+					'key' => '_wp_attachment_metadata',
 				),
+			),
 			);
 			$query = new WP_Query($query_args);
 			if ($query->have_posts()) {
@@ -499,14 +506,14 @@ class Plugin
 				$wp_filetype = wp_check_filetype(basename($target_path), null);
 				$info = pathinfo($target_path);
 				$attachment = array(
-					'ID' => $attachment_id,
-					'post_author' => $post_data['post_author'],
-					'post_content' => $post_data['post_content'],
-					'post_excerpt' => $post_data['post_content'],
-					'post_mime_type' => $wp_filetype['type'],
-					'post_name' => $info['filename'],
-					'post_status' => 'inherit',
-					'post_title' => $post_data['post_title'],
+				'ID' => $attachment_id,
+				'post_author' => $post_data['post_author'],
+				'post_content' => $post_data['post_content'],
+				'post_excerpt' => $post_data['post_content'],
+				'post_mime_type' => $wp_filetype['type'],
+				'post_name' => $info['filename'],
+				'post_status' => 'inherit',
+				'post_title' => $post_data['post_title'],
 				);
 				$attachment_id = wp_update_post($attachment);
 				do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
@@ -520,13 +527,13 @@ class Plugin
 			$wp_filetype = wp_check_filetype(basename($target_path), null);
 			$info = pathinfo($target_path);
 			$attachment = array(
-				'post_author' => $post_data['post_author'],
-				'post_content' => $post_data['post_content'],
-				'post_excerpt' => $post_data['post_content'],
-				'post_mime_type' => $wp_filetype['type'],
-				'post_name' => $info['filename'],
-				'post_status' => 'inherit',
-				'post_title' => $post_data['post_title'],
+			'post_author' => $post_data['post_author'],
+			'post_content' => $post_data['post_content'],
+			'post_excerpt' => $post_data['post_content'],
+			'post_mime_type' => $wp_filetype['type'],
+			'post_name' => $info['filename'],
+			'post_status' => 'inherit',
+			'post_title' => $post_data['post_title'],
 			);
 			$attachment_id = wp_insert_attachment($attachment, $target_path);
 			$this->thumbnailsAndMeta($attachment_id, $target_path);
@@ -601,17 +608,17 @@ class Plugin
 		[GPSLatitudeRef] => N
 		[GPSLatitude] => Array
 		(
-			[0] => 57/1
-			[1] => 31/1
-			[2] => 21334/521
+		[0] => 57/1
+		[1] => 31/1
+		[2] => 21334/521
 		)
 
 		[GPSLongitudeRef] => W
 		[GPSLongitude] => Array
 		(
-			[0] => 4/1
-			[1] => 16/1
-			[2] => 27387/1352
+		[0] => 4/1
+		[1] => 16/1
+		[2] => 27387/1352
 		)
 		*/
 
@@ -619,11 +626,19 @@ class Plugin
 
 		if (isset($exif['GPSLatitude'])) {
 			$GPS['lat']['deg'] = explode('/', $exif['GPSLatitude'][0]);
-			$GPS['lat']['deg'] = $GPS['lat']['deg'][0] / $GPS['lat']['deg'][1];
+			$GPS['lat']['deg'] = $GPS['lat']['deg'][1] > 0 ? $GPS['lat']['deg'][0] / $GPS['lat']['deg'][1] : 0;
 			$GPS['lat']['min'] = explode('/', $exif['GPSLatitude'][1]);
-			$GPS['lat']['min'] = $GPS['lat']['min'][0] / $GPS['lat']['min'][1];
+			$GPS['lat']['min'] = $GPS['lat']['min'][1] > 0 ? $GPS['lat']['min'][0] / $GPS['lat']['min'][1] : 0;
 			$GPS['lat']['sec'] = explode('/', $exif['GPSLatitude'][2]);
-			$GPS['lat']['sec'] = $GPS['lat']['sec'][1] !== 0 ? floatval($GPS['lat']['sec'][0]) / floatval($GPS['lat']['sec'][1]) : 0;
+
+			$lat_sec_0 = floatval($GPS['lat']['sec'][0]);
+			$lat_sec_1 = floatval($GPS['lat']['sec'][1]);
+
+			if ($lat_sec_0 > 0 && $lat_sec_1 > 0) {
+				$GPS['lat']['sec'] = $lat_sec_0 / $lat_sec_1;
+			} else {
+				$GPS['lat']['sec'] = 0;
+			}
 
 			$exif['GPSLatitudeDecimal'] = self::DMStoDEC($GPS['lat']['deg'], $GPS['lat']['min'], $GPS['lat']['sec']);
 			if ($exif['GPSLatitudeRef'] == 'S') {
@@ -636,11 +651,19 @@ class Plugin
 
 		if (isset($exif['GPSLongitude'])) {
 			$GPS['lon']['deg'] = explode('/', $exif['GPSLongitude'][0]);
-			$GPS['lon']['deg'] = $GPS['lon']['deg'][0] / $GPS['lon']['deg'][1];
+			$GPS['lon']['deg'] = $GPS['lon']['deg'][1] > 0 ? $GPS['lon']['deg'][0] / $GPS['lon']['deg'][1] : 0;
 			$GPS['lon']['min'] = explode('/', $exif['GPSLongitude'][1]);
-			$GPS['lon']['min'] = $GPS['lon']['min'][0] / $GPS['lon']['min'][1];
+			$GPS['lon']['min'] = $GPS['lon']['min'][1] > 0 ? $GPS['lon']['min'][0] / $GPS['lon']['min'][1] : 0;
 			$GPS['lon']['sec'] = explode('/', $exif['GPSLongitude'][2]);
-			$GPS['lon']['sec'] = $GPS['lon']['sec'][1] !== 0 ? floatval($GPS['lon']['sec'][0]) / floatval($GPS['lon']['sec'][1]) : 0;
+
+			$lon_sec_0 = floatval($GPS['lon']['sec'][0]);
+			$lon_sec_1 = floatval($GPS['lon']['sec'][1]);
+
+			if ($lon_sec_0 > 0 && $lon_sec_1 > 0) {
+				$GPS['lon']['sec'] = $lon_sec_0 / $lon_sec_1;
+			} else {
+				$GPS['lon']['sec'] = 0;
+			}
 
 			$exif['GPSLongitudeDecimal'] = $this->DMStoDEC($GPS['lon']['deg'], $GPS['lon']['min'], $GPS['lon']['sec']);
 			if ($exif['GPSLongitudeRef'] == 'W') {
@@ -687,6 +710,437 @@ class Plugin
 		}
 
 		return $exif;
+	}
+
+	private function pathToUrl($path)
+	{
+		$dirs = wp_upload_dir();
+		return str_replace($dirs['basedir'], $dirs['baseurl'], $path);
+	}
+
+	public function adminListViewPages()
+	{
+		add_submenu_page('upload.php', 'Images for import', 'For import', 'upload_files', 'importphotos', [$this, 'adminListView']);
+		add_submenu_page('upload.php', 'Flickr images', 'Flickr images', 'upload_files', 'flickrphotos', [$this, 'flickrListView']);
+		add_submenu_page('upload.php', 'Flickr sets', 'Flickr sets', 'upload_files', 'flickrsets', [$this, 'flickrSetView']);
+	}
+
+	public function adminListView()
+	{
+		$files = $this->getFiles();
+
+		if (empty($files)) {
+			echo '<p>No files</p>';
+		} else {
+			$file_html = [];
+			foreach ($files as $file) {
+				$file_path = $this->sanitizeFileName($file);
+				$file_url = $this->pathToUrl($file_path);
+				$exif = $this->buildEXIFArray($file_path, false);
+
+				$keywords = '<p>No keywords</p>';
+				if (!empty($exif['iptc']['keywords'])) {
+					foreach ($exif['iptc']['keywords'] as &$keyword) {
+						if (mb_detect_encoding($keyword) === 'ASCII') {
+							$keyword = iconv('ASCII', 'UTF-8//IGNORE', $keyword);
+						}
+					}
+					$keywords = '<p><em>Keywords</em>: ' . implode(', ', array_values($exif['iptc']['keywords'])).'</p>';
+				}
+				$calculated_decimal = '<p>No location data</p>';
+				if (!empty($exif['GPSCalculatedDecimal'])) {
+					$calculated_decimal = '<p><em>GPSCalculatedDecimal</em>: ' . $exif['GPSCalculatedDecimal'].'</p>';
+				}
+
+				$make_model = implode(' ', [$exif['Make'] ?? '', $exif['Model'] ?? '']);
+				if (empty($make_model)) {
+					$make_model = 'Unknown';
+				}
+				$make_model = '<p><em>Camera</em>: ' . $make_model.'</p>';
+
+				$file_name = '<p>' . $file->getFileName().'</p>';
+
+				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><th scope="row" class="check-column"><input type="checkbox" name="image[]" value="IMAGEID"></th><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$keywords.$calculated_decimal.$make_model.$file_name. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
+			}
+			printf(
+				'<div class="wrap">
+					<h1>%1$s</h1>
+					<table class="wp-list-table widefat fixed striped">
+						<thead><tr>
+							<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
+							<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
+							<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
+							<!--<th scope="col" id="exif" class="manage-column"><span>EXIF data</span></th>-->
+						</tr></thead>
+						<tbody id="the-list" class="ui-sortable">
+							%2$s
+						</tbody>
+					</table>
+				</div>',
+				get_admin_page_title(),
+				implode(chr(10), $file_html)
+			);
+		}
+	}
+
+	public function postLink($photo)
+	{
+		$existing = new WP_Query([
+		'post_type' => 'photo',
+		'meta_query' => [
+			[
+				'key' => 'video_ref',
+				'value' => $this->flickrEmbedUrl($photo),
+				'compare' => '=',
+			]
+		]
+		]);
+
+		if (!empty($existing->posts)) {
+			return get_permalink($existing->posts[0]);
+		} else {
+			if (is_array($photo['extradata']['tags'])) {
+				$photo['extradata']['tags'][] = 'Imported from Flickr';
+			} else {
+				$photo['extradata']['tags'] = ['Imported from Flickr'];
+			}
+
+			$post_id = wp_insert_post([
+				'post_title' => empty($photo['title'])? 'Untitled' : $photo['title'],
+				'post_content' => isset($photo['description']) && isset($photo['description']['_content']) ? $photo['description']['_content'] : '',
+				'post_status' => 'publish',
+				'post_type' => 'photo',
+				'post_author' => get_current_user_id(),
+				'post_date' => date('Y-m-d H:i:s', $photo['dateupload']),
+				'post_name' => $photo['id'],
+				'tax_input' => [
+					'collection' => (array)$photo['extradata']['tags'],
+				],
+				'meta_input' => [
+					'video_ref' => $this->flickrEmbedUrl($photo)
+				]
+			]);
+
+			if (is_array($photo['extradata']['location']) && isset($photo['extradata']['location']['latitude']) && isset($photo['extradata']['location']['longitude'])) {
+				update_post_meta($post_id, 'location', [
+					'address' => $photo['extradata']['location']['latitude'].','.$photo['extradata']['location']['longitude'],
+					'lat' => $photo['extradata']['location']['latitude'],
+					'lng' => $photo['extradata']['location']['longitude'],
+				]);
+			}
+
+			return get_permalink($post_id);
+		}
+	}
+
+	public function flickrListView()
+	{
+		$this->flickr_config = array(
+			'flickr_key' => esc_attr(get_option('flickr_key')),
+			'flickr_secret' => esc_attr(get_option('flickr_secret')),
+			'flickr_userid' => esc_attr(get_option('flickr_userid'))
+		);
+
+		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
+			//$upload_dir = wp_upload_dir();
+			$per_page = 100;
+
+			if (isset($_GET['pagenumber'])) {
+				$pagenumber = (int)$_GET['pagenumber'];
+			} else {
+				$pagenumber = 0;
+			}
+
+			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&page=' .$pagenumber. '&per_page='.$per_page;
+
+			$out=array();
+
+			if (($image_data=$this->getRemoteFileContents($FlickrRequestString))) {
+				$data = json_decode($image_data, true);
+
+				$page_list = '<ul class="inline">';
+				for ($page=0; $page <= $data['photos']['pages']; $page++) {
+					if ($page === $data['photos']['page']) {
+						$page_list .='<li><strong>'.$page.'</strong></li>';
+					} else {
+						$page_list .='<li><a href="/wp-admin/upload.php?page=flickrphotos&pagenumber=' .$page. '">'.$page.'</a></li>';
+					}
+				}
+				$page_list .= '</ul>';
+
+				echo $page_list;
+
+				if ($pagenumber>0) {
+					if ($data['stat']=='ok') {
+						foreach ($data['photos']['photo'] as $photo) {
+							$photo['extradata'] = $this->getFlickrExtraData($photo['id']);
+
+							// if ((int)$photo['datetakenunknown'] || !$photo['datetaken']) {
+							// 	$date = date('Y-m-d H:i:s', $photo['dateupload']);
+							// } else {
+							// 	$date = date('Y-m-d H:i:s', strtotime($photo['datetaken']));
+							// }
+
+							$post_link = $this->postLink($photo);
+
+							$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
+								<th scope="row" class="check-column">
+									<input type="checkbox" name="image[]" value="' .$photo['id']. '">
+								</th>
+								<td>
+									<img src="' .$photo['url_s']. '">
+								</td>
+								<td>
+									<p><strong>' .$photo['title']. '</strong></p>
+									<p>Tags: '.implode(', ', $photo['extradata']['tags']).'</p>
+									<p>Location: '.implode(', ', $photo['extradata']['location']).'</p>
+									<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
+									<p>Post URL: <a href="' .$post_link. '">' .$post_link. '</a></p>
+								</td>
+								<td>
+									<!--<pre>' .print_r($photo, 1). '</pre>-->
+								</td>
+							</tr>
+							';
+						}
+
+						printf(
+							'<div class="wrap">
+							<h1>%1$s</h1>
+							<script>
+							var posts_for_import = [];
+							</script>
+							<button class="button button-primary" data-import-from-flickr>Import</button>
+							<table class="wp-list-table widefat fixed striped">
+								<thead><tr>
+									<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
+									<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
+									<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
+									<th scope="col" id="exif" class="manage-column"><span>All data</span></th>
+								</tr></thead>
+								<tbody id="the-list" class="ui-sortable">
+									%2$s
+								</tbody>
+							</table>
+						</div>',
+							get_admin_page_title(),
+							implode(chr(10), $out)
+						);
+					}
+				}
+			}
+		}
+	}
+
+	public function flickrSetView()
+	{
+		$this->flickr_config = array(
+			'flickr_key' => esc_attr(get_option('flickr_key')),
+			'flickr_secret' => esc_attr(get_option('flickr_secret')),
+			//'flickr_userid' => esc_attr(get_option('flickr_userid'))
+			'flickr_userid' => '87637435@N00'
+		);
+
+		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
+			$per_page = 500;
+
+			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photosets.getList&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&primary_photo_extras=license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_m,url_o&page=1&per_page='.$per_page;
+
+			if (($sets_data=$this->getRemoteFileContents($FlickrRequestString))) {
+				$data = json_decode($sets_data, true);
+				if ($data['stat']=='ok') {
+					$out = [];
+					foreach ($data['photosets']['photoset'] as $set) {
+						$out[] = '<tr id="set-' .$set['id']. '" class="set-' .$set['id']. '"' .($set['photos'] > 500 ? ' style="background-color:#fcc"' : ''). '>
+								<th scope="row" class="check-column">
+									<input type="checkbox" name="image[]" value="' .$set['id']. '">
+								</th>
+								<td><strong>' .$set['title']['_content']. '</strong></td>
+								<td>' .wpautop($set['description']['_content']).'</td>
+								<td>' .$set['photos']. '</td>
+							</tr>
+							';
+					}
+					printf(
+						'<div class="wrap">
+							<h1>%1$s</h1>
+							<script>
+							var posts_for_import = [];
+							</script>
+							<table class="wp-list-table widefat fixed striped">
+								<thead><tr>
+									<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
+									<th scope="col" id="title" class="manage-column column-title"><span>Flickr set</span></th>
+									<th scope="col" id="description" class="manage-column column-description"><span>Description</span></th>
+									<th scope="col" id="photocount" class="manage-column column-photocount"><span>Photo count</span></th>
+								</tr></thead>
+								<tbody id="the-list" class="ui-sortable">
+									%2$s
+								</tbody>
+							</table>
+						</div>',
+						get_admin_page_title(),
+						implode(chr(10), $out)
+					);
+				}
+			}
+
+			if (isset($_GET['createsets'])) {
+				foreach ($data['photosets']['photoset'] as $set) {
+					wp_insert_term(
+						$set['title']['_content'],
+						'album',
+						[
+							'description' => $set['description']['_content']
+						]
+					);
+				}
+			}
+
+			if (isset($_GET['updatephotos'])) {
+				foreach ($data['photosets']['photoset'] as $set) {
+					$photos_data = $this->getRemoteFileContents('https://api.flickr.com/services/rest/?method=flickr.photosets.getPhotos&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&photoset_id='.$set['id'].'&per_page=500');
+					$photos_data = json_decode($photos_data, true);
+					foreach ($photos_data['photoset']['photo'] as $flickr_photo) {
+						$photo_posts = get_posts([
+							'post_type' => 'photo',
+							'post_status' => 'publish',
+							'meta_query' => [
+								'relation' => 'AND',
+								[
+									'key' => 'video_ref',
+									'compare' => 'EXISTS',
+								],
+								[
+									'key' => 'video_ref',
+									'compare' => '=',
+									'value' => 'https://www.flickr.com/photos/87637435@N00/' .$flickr_photo['id']. '/'
+								]
+							]
+						]);
+						foreach ($photo_posts as $post) {
+							wp_set_object_terms($post->ID, [$set['title']['_content']], 'album', true);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private function getFlickrExtraData($photo_id)
+	{
+		$url = 'https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&photo_id='.$photo_id;
+		$data = $this->getRemoteFileContents($url);
+		$data = json_decode($data, true);
+		$out = [];
+		$out['tags'] = [];
+		if (isset($data['photo']) && isset($data['photo']['tags']) && is_array($data['photo']['tags']['tag']) && !empty($data['photo']['tags']['tag'])) {
+			foreach ($data['photo']['tags']['tag'] as $tag) {
+				if (isset($tag['raw'])) {
+					$out['tags'][] = $tag['raw'];
+				}
+			}
+		}
+		$out['location'] = [];
+		if (isset($data['photo']) && isset($data['photo']['location']) && is_array($data['photo']['location']) && isset($data['photo']['location']['latitude']) && isset($data['photo']['location']['longitude'])) {
+			$out['location'] = [
+				'latitude' => $data['photo']['location']['latitude'],
+				'longitude' => $data['photo']['location']['longitude'],
+			];
+		}
+		return $out;
+	}
+
+	private function getRemoteFileContents($url)
+	{
+		if (false === ( $contents = get_transient('flickr_'.md5($url)) )) {
+			$curl_instance = curl_init();
+			curl_setopt($curl_instance, CURLOPT_URL, $url);
+			curl_setopt($curl_instance, CURLOPT_CONNECTTIMEOUT, 1);
+			curl_setopt($curl_instance, CURLOPT_RETURNTRANSFER, 1);
+			$contents = curl_exec($curl_instance);
+			//$response = curl_getinfo($curl_instance);
+			curl_close($curl_instance);
+			set_transient('flickr_'.md5($url), $contents, HOUR_IN_SECONDS);
+		}
+		return $contents;
+	}
+
+	private function flickrEmbedUrl($data)
+	{
+		return sprintf(
+			'https://www.flickr.com/photos/%1$s/%2$s/',
+			$data['owner'],
+			$data['id']
+		);
+	}
+
+	public function flickrScripts($hook)
+	{
+		if ($hook !== 'media_page_flickrphotos') {
+			return;
+		}
+		wp_enqueue_style('media_page_flickrphotos', plugins_url('assets/media_page_flickrphotos.css', __FILE__));
+	}
+
+	public function addMetaFields()
+	{
+		register_rest_field('post', 'video_ref', array(
+			'get_callback' => function ($args) {
+				return get_post_meta($args['id'], 'video_ref', true);
+			},
+			'update_callback' => function ($value, $post) {
+				if (get_post_meta($post->ID, 'video_ref', true) === $value) {
+					return true;
+				}
+				if (!update_post_meta($post->ID, 'video_ref', $value)) {
+					return new \WP_Error(
+						'rest_comment_video_ref_failed',
+						__('Post ' .$post->ID. ' was not updated video_ref with value “' .$value. '”.'),
+						['status' => 500]
+					);
+				}
+				return true;
+			},
+			'schema' => array(
+				'description' => __('Video reference'),
+				'type'        => 'string'
+			),
+		));
+
+		register_rest_field('post', 'location', array(
+			'get_callback' => function ($args) {
+				return get_post_meta($args['id'], 'video_ref', true);
+			},
+			'update_callback' => function ($value, $post) {
+				if (get_post_meta($post->ID, 'location', true) === $value) {
+					return true;
+				}
+				if (!update_post_meta($post->ID, 'location', $value)) {
+					return new \WP_Error(
+						'rest_comment_location_failed',
+						__('Post ' .$post->ID. ' was not updated location with value “' .$value. '”.'),
+						['status' => 500]
+					);
+				}
+				return true;
+			},
+			'schema' => array(
+				'description' => __('Geographic location'),
+				'type'        => 'string'
+			),
+		));
+	}
+
+	public function maybeAddTerms($post, $request, $update = true)
+	{
+		$params = $request->get_params();
+		if (isset($params['meta']) && isset($params['meta']['tags']) && ! empty($params['meta']['tags'])) {
+			wp_set_object_terms($post->ID, $params['meta']['tags'], 'post_tag', $update);
+		}
+		if (isset($params['meta']) && isset($params['meta']['categories']) && ! empty($params['meta']['categories'])) {
+			wp_set_object_terms($post->ID, $params['meta']['categories'], 'category', $update);
+		}
 	}
 }
 
