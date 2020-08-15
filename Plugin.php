@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Import from folder
+Plugin Name: Attachments from FTP - import from folder
 Description: Create attachment posts from files in a folder on the server.
 Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
@@ -28,14 +28,10 @@ class Plugin
 		register_activation_hook(__FILE__, [$this, 'activation']);
 		register_deactivation_hook(__FILE__, [$this, 'deactivation']);
 
+		require_once 'OptionsPage.php';
+
 		$this->options = get_option('mhm_attachment_from_ftp');
 
-		if (is_admin()) {
-			/**
-			 * Load and initialize the configuration for the plugin's options page in wp-admin.
-			 */
-			require_once 'OptionsPage.php';
-		}
 		$this->setThings();
 
 		add_action('admin_init', [$this, 'checkVersion']);
