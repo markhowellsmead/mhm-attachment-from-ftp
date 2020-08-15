@@ -16,7 +16,7 @@ use WP_Query;
 class Plugin
 {
 	public $wpversion = '5.3';
-	public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
+	public $frequency = 'minute';
 	private $sourceFolder = '';
 	private $author_id = -1;
 	private $allowed_file_types = [];
@@ -102,10 +102,10 @@ class Plugin
 
 	public function cronInterval()
 	{
-		if (!isset($schedules['two_minutes'])) {
-			$schedules['two_minutes'] = [
-				'interval' => 120,
-				'display' => __('Every two minutes')
+		if (!isset($schedules['minute'])) {
+			$schedules['minute'] = [
+				'interval' => 60,
+				'display' => __('Every minute')
 			];
 		}
 		return $schedules;
