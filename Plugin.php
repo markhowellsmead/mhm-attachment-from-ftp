@@ -41,7 +41,7 @@ class Plugin
 		add_action('admin_init', [$this, 'checkVersion']);
 		add_action('admin_menu', [$this, 'adminListViewPages']);
 		add_filter('cron_schedules', [$this, 'cronInterval']);
-		add_action('mhm-attachment-from-ftp/check_folder', [$this, 'checkFolder']);
+		add_action('mhm_attachment_from_ftp_check_folder', [$this, 'checkFolder']);
 		add_filter('wp_read_image_metadata', [$this, 'additionalImageMeta'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
 		add_action('rest_api_init', [$this, 'addMetaFields']);
@@ -52,15 +52,16 @@ class Plugin
 	{
 		$this->checkVersion();
 
-		if (!wp_next_scheduled('mhm-attachment-from-ftp/check_folder')) {
-			wp_schedule_event(time(), $this->frequency, 'mhm-attachment-from-ftp/check_folder');
+		if (!wp_next_scheduled('mhm_attachment_from_ftp_check_folder')) {
+			wp_schedule_event(time(), $this->frequency, 'mhm_attachment_from_ftp_check_folder');
 		}
 		$this->setThings();
 	}
 
 	public function deactivation()
 	{
-		wp_clear_scheduled_hook('mhm-attachment-from-ftp/check_folder');
+		wp_unschedule_event(time(), 'mhm_attachment_from_ftp_check_folder');
+		wp_clear_scheduled_hook('mhm_attachment_from_ftp_check_folder');
 	}
 
 	public function checkVersion()
@@ -124,7 +125,7 @@ class Plugin
 
 	/**
 	 * The main function, which is called by the cron task registered by
-	 * mhm-attachment-from-ftp/check_folder. If all is well, no text is
+	 * mhm_attachment_from_ftp_check_folder. If all is well, no text is
 	 * output (and therefore no message will appear).
 	 */
 	public function checkFolder()
