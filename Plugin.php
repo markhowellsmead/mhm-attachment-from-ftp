@@ -21,7 +21,6 @@ class Plugin
 	private $author_id = -1;
 	private $allowed_file_types = [];
 	private $options = [];
-	private $flickr_config = [];
 
 	public function __construct()
 	{
@@ -39,7 +38,6 @@ class Plugin
 		add_filter('cron_schedules', [$this, 'cronInterval']);
 		add_action('mhm_attachment_from_ftp_check_folder', [$this, 'checkFolder']);
 		add_filter('wp_read_image_metadata', [$this, 'additionalImageMeta'], 10, 3);
-		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
 		add_action('rest_api_init', [$this, 'addMetaFields']);
 		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
 	}
@@ -58,6 +56,14 @@ class Plugin
 			$content = print_r($content, 1);
 		}
 		error_log(date('r').chr(9).$title.chr(9).$content.chr(10), 3, WP_CONTENT_DIR.'/mhm_attachment_from_ftp.success.log');
+	}
+
+	private function legibleSize($file_path, $decimals = 2)
+	{
+		$bytes = @filesize($file_path);
+		$size = [' B.',' Kb.',' Mb.',' Gb.',' Tb.',' Pb.'];
+		$factor = floor((strlen($bytes) - 1) / 3);
+		return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
 	}
 
 	public function activation()
@@ -763,8 +769,6 @@ class Plugin
 	public function adminListViewPages()
 	{
 		add_submenu_page('upload.php', 'Images for import', 'For import', 'upload_files', 'importphotos', [$this, 'adminListView']);
-		add_submenu_page('upload.php', 'Flickr images', 'Flickr images', 'upload_files', 'flickrphotos', [$this, 'flickrListView']);
-		add_submenu_page('upload.php', 'Flickr sets', 'Flickr sets', 'upload_files', 'flickrsets', [$this, 'flickrSetView']);
 	}
 
 	public function adminListView()
@@ -802,14 +806,17 @@ class Plugin
 
 				$file_name = '<p>' . $file->getFileName().'</p>';
 
-				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><th scope="row" class="check-column"><input type="checkbox" name="image[]" value="IMAGEID"></th><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$keywords.$calculated_decimal.$make_model.$file_name. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
+				$file_size = '<p>' . $this->legibleSize($file->getPathname()).'</p>';
+
+				$details = $keywords.$calculated_decimal.$make_model.$file_name.$file_size;
+
+				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$details. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
 			}
 			printf(
 				'<div class="wrap">
 					<h1>%1$s</h1>
 					<table class="wp-list-table widefat fixed striped">
 						<thead><tr>
-							<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
 							<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
 							<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
 							<!--<th scope="col" id="exif" class="manage-column"><span>EXIF data</span></th>-->
@@ -823,306 +830,6 @@ class Plugin
 				implode(chr(10), $file_html)
 			);
 		}
-	}
-
-	public function postLink($photo)
-	{
-		$existing = new WP_Query([
-			'post_type' => 'photo',
-			'meta_query' => [
-				[
-					'key' => 'video_ref',
-					'value' => $this->flickrEmbedUrl($photo),
-					'compare' => '=',
-				]
-			]
-		]);
-
-		if (!empty($existing->posts)) {
-			return get_permalink($existing->posts[0]);
-		} else {
-			if (is_array($photo['extradata']['tags'])) {
-				$photo['extradata']['tags'][] = 'Imported from Flickr';
-			} else {
-				$photo['extradata']['tags'] = ['Imported from Flickr'];
-			}
-
-			$post_id = wp_insert_post([
-				'post_title' => empty($photo['title'])? 'Untitled' : $photo['title'],
-				'post_content' => isset($photo['description']) && isset($photo['description']['_content']) ? $photo['description']['_content'] : '',
-				'post_status' => 'publish',
-				'post_type' => 'photo',
-				'post_author' => get_current_user_id(),
-				'post_date' => date('Y-m-d H:i:s', $photo['dateupload']),
-				'post_name' => $photo['id'],
-				'tax_input' => [
-					'collection' => (array)$photo['extradata']['tags'],
-				],
-				'meta_input' => [
-					'video_ref' => $this->flickrEmbedUrl($photo)
-				]
-			]);
-
-			if (is_array($photo['extradata']['location']) && isset($photo['extradata']['location']['latitude']) && isset($photo['extradata']['location']['longitude'])) {
-				update_post_meta($post_id, 'location', [
-					'address' => $photo['extradata']['location']['latitude'].','.$photo['extradata']['location']['longitude'],
-					'lat' => $photo['extradata']['location']['latitude'],
-					'lng' => $photo['extradata']['location']['longitude'],
-				]);
-			}
-
-			return get_permalink($post_id);
-		}
-	}
-
-	public function flickrListView()
-	{
-		$this->flickr_config = [
-			'flickr_key' => esc_attr(get_option('flickr_key')),
-			'flickr_secret' => esc_attr(get_option('flickr_secret')),
-			'flickr_userid' => esc_attr(get_option('flickr_userid'))
-		];
-
-		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
-			//$upload_dir = wp_upload_dir();
-			$per_page = 100;
-
-			if (isset($_GET['pagenumber'])) {
-				$pagenumber = (int)$_GET['pagenumber'];
-			} else {
-				$pagenumber = 0;
-			}
-
-			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&page=' .$pagenumber. '&per_page='.$per_page;
-
-			$out=[];
-
-			if (($image_data=$this->getRemoteFileContents($FlickrRequestString))) {
-				$data = json_decode($image_data, true);
-
-				$page_list = '<ul class="inline">';
-				for ($page=0; $page <= $data['photos']['pages']; $page++) {
-					if ($page === $data['photos']['page']) {
-						$page_list .='<li><strong>'.$page.'</strong></li>';
-					} else {
-						$page_list .='<li><a href="/wp-admin/upload.php?page=flickrphotos&pagenumber=' .$page. '">'.$page.'</a></li>';
-					}
-				}
-				$page_list .= '</ul>';
-
-				echo $page_list;
-
-				if ($pagenumber>0) {
-					if ($data['stat']=='ok') {
-						foreach ($data['photos']['photo'] as $photo) {
-							$photo['extradata'] = $this->getFlickrExtraData($photo['id']);
-
-							// if ((int)$photo['datetakenunknown'] || !$photo['datetaken']) {
-							// 	$date = date('Y-m-d H:i:s', $photo['dateupload']);
-							// } else {
-							// 	$date = date('Y-m-d H:i:s', strtotime($photo['datetaken']));
-							// }
-
-							$post_link = $this->postLink($photo);
-
-							$out[] = '<tr id="post-' .$photo['id']. '" class="post-' .$photo['id']. '">
-								<th scope="row" class="check-column">
-									<input type="checkbox" name="image[]" value="' .$photo['id']. '">
-								</th>
-								<td>
-									<img src="' .$photo['url_s']. '">
-								</td>
-								<td>
-									<p><strong>' .$photo['title']. '</strong></p>
-									<p>Tags: '.implode(', ', $photo['extradata']['tags']).'</p>
-									<p>Location: '.implode(', ', $photo['extradata']['location']).'</p>
-									<p>oEmbed URL: '.$this->flickrEmbedUrl($photo).'</p>
-									<p>Post URL: <a href="' .$post_link. '">' .$post_link. '</a></p>
-								</td>
-								<td>
-									<!--<pre>' .print_r($photo, 1). '</pre>-->
-								</td>
-							</tr>
-							';
-						}
-
-						printf(
-							'<div class="wrap">
-							<h1>%1$s</h1>
-							<script>
-							var posts_for_import = [];
-							</script>
-							<button class="button button-primary" data-import-from-flickr>Import</button>
-							<table class="wp-list-table widefat fixed striped">
-								<thead><tr>
-									<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
-									<th scope="col" id="image" class="manage-column"><span>Preview</span></th>
-									<th scope="col" id="title" class="manage-column column-title column-primary"><span>Title</span></th>
-									<th scope="col" id="exif" class="manage-column"><span>All data</span></th>
-								</tr></thead>
-								<tbody id="the-list" class="ui-sortable">
-									%2$s
-								</tbody>
-							</table>
-						</div>',
-							get_admin_page_title(),
-							implode(chr(10), $out)
-						);
-					}
-				}
-			}
-		}
-	}
-
-	public function flickrSetView()
-	{
-		$this->flickr_config = [
-			'flickr_key' => esc_attr(get_option('flickr_key')),
-			'flickr_secret' => esc_attr(get_option('flickr_secret')),
-			//'flickr_userid' => esc_attr(get_option('flickr_userid'))
-			'flickr_userid' => '87637435@N00'
-		];
-
-		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
-			$per_page = 500;
-
-			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photosets.getList&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&primary_photo_extras=license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_m,url_o&page=1&per_page='.$per_page;
-
-			if (($sets_data=$this->getRemoteFileContents($FlickrRequestString))) {
-				$data = json_decode($sets_data, true);
-				if ($data['stat']=='ok') {
-					$out = [];
-					foreach ($data['photosets']['photoset'] as $set) {
-						$out[] = '<tr id="set-' .$set['id']. '" class="set-' .$set['id']. '"' .($set['photos'] > 500 ? ' style="background-color:#fcc"' : ''). '>
-								<th scope="row" class="check-column">
-									<input type="checkbox" name="image[]" value="' .$set['id']. '">
-								</th>
-								<td><strong>' .$set['title']['_content']. '</strong></td>
-								<td>' .wpautop($set['description']['_content']).'</td>
-								<td>' .$set['photos']. '</td>
-							</tr>
-							';
-					}
-					printf(
-						'<div class="wrap">
-							<h1>%1$s</h1>
-							<script>
-							var posts_for_import = [];
-							</script>
-							<table class="wp-list-table widefat fixed striped">
-								<thead><tr>
-									<td id="cb" class="manage-column column-cb check-column"><label class="screen-reader-text" for="cb-select-all-1">Select All</label><input id="cb-select-all-1" type="checkbox"></td>
-									<th scope="col" id="title" class="manage-column column-title"><span>Flickr set</span></th>
-									<th scope="col" id="description" class="manage-column column-description"><span>Description</span></th>
-									<th scope="col" id="photocount" class="manage-column column-photocount"><span>Photo count</span></th>
-								</tr></thead>
-								<tbody id="the-list" class="ui-sortable">
-									%2$s
-								</tbody>
-							</table>
-						</div>',
-						get_admin_page_title(),
-						implode(chr(10), $out)
-					);
-				}
-			}
-
-			if (isset($_GET['createsets'])) {
-				foreach ($data['photosets']['photoset'] as $set) {
-					wp_insert_term(
-						$set['title']['_content'],
-						'album',
-						[
-							'description' => $set['description']['_content']
-						]
-					);
-				}
-			}
-
-			if (isset($_GET['updatephotos'])) {
-				foreach ($data['photosets']['photoset'] as $set) {
-					$photos_data = $this->getRemoteFileContents('https://api.flickr.com/services/rest/?method=flickr.photosets.getPhotos&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&photoset_id='.$set['id'].'&per_page=500');
-					$photos_data = json_decode($photos_data, true);
-					foreach ($photos_data['photoset']['photo'] as $flickr_photo) {
-						$photo_posts = get_posts([
-							'post_type' => 'photo',
-							'post_status' => 'publish',
-							'meta_query' => [
-								'relation' => 'AND',
-								[
-									'key' => 'video_ref',
-									'compare' => 'EXISTS',
-								],
-								[
-									'key' => 'video_ref',
-									'compare' => '=',
-									'value' => 'https://www.flickr.com/photos/87637435@N00/' .$flickr_photo['id']. '/'
-								]
-							]
-						]);
-						foreach ($photo_posts as $post) {
-							wp_set_object_terms($post->ID, [$set['title']['_content']], 'album', true);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private function getFlickrExtraData($photo_id)
-	{
-		$url = 'https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&photo_id='.$photo_id;
-		$data = $this->getRemoteFileContents($url);
-		$data = json_decode($data, true);
-		$out = [];
-		$out['tags'] = [];
-		if (isset($data['photo']) && isset($data['photo']['tags']) && is_array($data['photo']['tags']['tag']) && !empty($data['photo']['tags']['tag'])) {
-			foreach ($data['photo']['tags']['tag'] as $tag) {
-				if (isset($tag['raw'])) {
-					$out['tags'][] = $tag['raw'];
-				}
-			}
-		}
-		$out['location'] = [];
-		if (isset($data['photo']) && isset($data['photo']['location']) && is_array($data['photo']['location']) && isset($data['photo']['location']['latitude']) && isset($data['photo']['location']['longitude'])) {
-			$out['location'] = [
-				'latitude' => $data['photo']['location']['latitude'],
-				'longitude' => $data['photo']['location']['longitude'],
-			];
-		}
-		return $out;
-	}
-
-	private function getRemoteFileContents($url)
-	{
-		if (false === ( $contents = get_transient('flickr_'.md5($url)) )) {
-			$curl_instance = curl_init();
-			curl_setopt($curl_instance, CURLOPT_URL, $url);
-			curl_setopt($curl_instance, CURLOPT_CONNECTTIMEOUT, 1);
-			curl_setopt($curl_instance, CURLOPT_RETURNTRANSFER, 1);
-			$contents = curl_exec($curl_instance);
-			//$response = curl_getinfo($curl_instance);
-			curl_close($curl_instance);
-			set_transient('flickr_'.md5($url), $contents, HOUR_IN_SECONDS);
-		}
-		return $contents;
-	}
-
-	private function flickrEmbedUrl($data)
-	{
-		return sprintf(
-			'https://www.flickr.com/photos/%1$s/%2$s/',
-			$data['owner'],
-			$data['id']
-		);
-	}
-
-	public function flickrScripts($hook)
-	{
-		if ($hook !== 'media_page_flickrphotos') {
-			return;
-		}
-		wp_enqueue_style('media_page_flickrphotos', plugins_url('assets/media_page_flickrphotos.css', __FILE__));
 	}
 
 	public function addMetaFields()

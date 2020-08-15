@@ -1,8 +1,0 @@
-ul.inline {
-	display: flex;
-	flex-flow: row wrap;
-}
-
-ul.inline li {
-	flex-basis: 10%;
-}
