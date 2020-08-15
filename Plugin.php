@@ -184,11 +184,10 @@ class Plugin
 				continue;
 			}
 
-			$target_folder = $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
+			$target_folder = WP_CONTENT_DIR.'/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
 			$entries[strtotime($exif['DateTime'])] = [
 				'post_author' => $this->author_id,
-				'post_type' => $this->post_type,
 				'post_title' => (string) $exif['iptc']['graphic_name'],
 				'post_content' => (string) $exif['iptc']['caption'],
 				'post_tags' => $exif['iptc']['keywords'],
