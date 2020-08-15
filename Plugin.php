@@ -48,6 +48,14 @@ class Plugin
 		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
 	}
 
+	private function debug($title, $content = '')
+	{
+		if (is_array($content)) {
+			$content = print_r($content, 1);
+		}
+		error_log($title.chr(9).$content.chr(10), 0);
+	}
+
 	public function activation()
 	{
 		$this->checkVersion();
@@ -140,7 +148,6 @@ class Plugin
 
 		if (empty($files)) {
 			do_action('mhm-attachment-from-ftp/no_files', $this->sourceFolder);
-
 			return;
 		}
 
