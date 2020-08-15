@@ -160,6 +160,11 @@ class Plugin
 				continue;
 			}
 
+			if ($filesize = round(filesize($file_path) / 1024 / 1024) > 10) {
+				do_action('mhm-attachment-from-ftp/too_big', $file_path, $filesize.' Mb');
+				continue;
+			}
+
 			$target_folder = $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
 			$entries[strtotime($exif['DateTime'])] = [
