@@ -19,14 +19,14 @@ class Plugin
 	public $frequency = 'hourly'; // Fixed. A filter is coming soon to allow customization.
 	private $sourceFolder = '';
 	private $author_id = -1;
-	private $allowed_file_types = array();
-	private $options = array();
+	private $allowed_file_types = [];
+	private $options = [];
 	private $flickr_config = [];
 
 	public function __construct()
 	{
-		register_activation_hook(__FILE__, array($this, 'activation'));
-		register_deactivation_hook(__FILE__, array($this, 'deactivation'));
+		register_activation_hook(__FILE__, [$this, 'activation']);
+		register_deactivation_hook(__FILE__, [$this, 'deactivation']);
 
 		$this->options = get_option('mhm_attachment_from_ftp');
 
@@ -38,10 +38,10 @@ class Plugin
 		}
 		$this->setThings();
 
-		add_action('admin_init', array($this, 'checkVersion'));
+		add_action('admin_init', [$this, 'checkVersion']);
 		add_action('admin_menu', [$this, 'adminListViewPages']);
-		add_action('mhm-attachment-from-ftp/check_folder', array($this, 'checkFolder'));
-		add_filter('wp_read_image_metadata', array($this, 'additionalImageMeta'), 10, 3);
+		add_action('mhm-attachment-from-ftp/check_folder', [$this, 'checkFolder']);
+		add_filter('wp_read_image_metadata', [$this, 'additionalImageMeta'], 10, 3);
 		add_action('admin_enqueue_scripts', [$this, 'flickrScripts'], 10, 1);
 		add_action('rest_api_init', [$this, 'addMetaFields']);
 		add_action('rest_insert_post', [$this, 'maybeAddTerms'], 1, 3);
@@ -68,7 +68,7 @@ class Plugin
 		if (!$this->compatibleVersion()) {
 			if (is_plugin_active('mhm-attachment-from-ftp')) {
 				deactivate_plugins('mhm-attachment-from-ftp');
-				add_action('admin_notices', array($this, 'disabledNotice'));
+				add_action('admin_notices', [$this, 'disabledNotice']);
 				if (isset($_GET['activate'])) {
 					unset($_GET['activate']);
 				}
@@ -131,7 +131,7 @@ class Plugin
 			return;
 		}
 
-		$entries = array();
+		$entries = [];
 
 		foreach ($files as $file) {
 			$file_path = $this->sanitizeFileName($file);
@@ -149,19 +149,19 @@ class Plugin
 
 			$target_folder = $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
-			$entries[strtotime($exif['DateTime'])] = array(
-			'post_author' => $this->author_id,
-			'post_type' => $this->post_type,
-			'post_title' => (string) $exif['iptc']['graphic_name'],
-			'post_content' => (string) $exif['iptc']['caption'],
-			'post_tags' => $exif['iptc']['keywords'],
-			'file_date' => $exif['DateTimeOriginal'],
-			'source_path' => $file_path,
-			'target_path' => $target_folder.$file->getFileName(),
-			'target_folder' => $target_folder,
-			'file_name' => $file->getFileName(),
-			'post_meta' => array(),
-			);
+			$entries[strtotime($exif['DateTime'])] = [
+				'post_author' => $this->author_id,
+				'post_type' => $this->post_type,
+				'post_title' => (string) $exif['iptc']['graphic_name'],
+				'post_content' => (string) $exif['iptc']['caption'],
+				'post_tags' => $exif['iptc']['keywords'],
+				'file_date' => $exif['DateTimeOriginal'],
+				'source_path' => $file_path,
+				'target_path' => $target_folder.$file->getFileName(),
+				'target_folder' => $target_folder,
+				'file_name' => $file->getFileName(),
+				'post_meta' => [],
+			];
 
 
 			/**
@@ -254,13 +254,13 @@ class Plugin
 
 	private function setAllowedFileTypes()
 	{
-		$this->allowed_file_types = apply_filters('mhm-attachment-from-ftp/allowed-file-types', array(
-		'image/jpeg',
-		'image/gif',
-		'image/png',
-		'image/bmp',
-		'image/tiff',
-		));
+		$this->allowed_file_types = apply_filters('mhm-attachment-from-ftp/allowed-file-types', [
+			'image/jpeg',
+			'image/gif',
+			'image/png',
+			'image/bmp',
+			'image/tiff',
+		]);
 	}
 
 	private function setThings()
@@ -316,7 +316,7 @@ class Plugin
 			return false;
 		}
 		$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->sourceFolder), \RecursiveIteratorIterator::CHILD_FIRST);
-		$out = array();
+		$out = [];
 		foreach ($iterator as $path) {
 			if (!is_file($path) || strpos($path, '.DS_Store') !== false) {
 				continue;
@@ -362,7 +362,7 @@ class Plugin
 	{
 		$image_file_types = apply_filters(
 			'wp_read_image_metadata_types',
-			array(IMAGETYPE_JPEG, IMAGETYPE_TIFF_II, IMAGETYPE_TIFF_MM)
+			[IMAGETYPE_JPEG, IMAGETYPE_TIFF_II, IMAGETYPE_TIFF_MM]
 		);
 
 		if (in_array($sourceImageType, $image_file_types) && function_exists('iptcparse')) {
@@ -424,7 +424,7 @@ class Plugin
 	 */
 	public function arrayMapRecursive($function, $array)
 	{
-		$newArr = array();
+		$newArr = [];
 
 		foreach ($array as $key => $value) {
 			$newArr[ $key ] = (is_array($value) ? $this->arrayMapRecursive($function, $value) : (is_array($function) ? call_user_func_array($function, $value) : $function($value)));
@@ -454,18 +454,18 @@ class Plugin
 		// Is the file somewhere in the in uploads directory?
 		if (false !== strpos($path, $dir['basedir'].'/')) {
 			$file = basename($path);
-			$query_args = array(
-			'post_type' => 'attachment',
-			'post_status' => 'inherit',
-			'fields' => 'ids',
-			'meta_query' => array(
-				array(
-					'value' => $file,
-					'compare' => 'LIKE',
-					'key' => '_wp_attachment_metadata',
-				),
-			),
-			);
+			$query_args = [
+				'post_type' => 'attachment',
+				'post_status' => 'inherit',
+				'fields' => 'ids',
+				'meta_query' => [
+					[
+						'value' => $file,
+						'compare' => 'LIKE',
+						'key' => '_wp_attachment_metadata',
+					],
+				],
+			];
 			$query = new WP_Query($query_args);
 			if ($query->have_posts()) {
 				foreach ($query->posts as $post_id) {
@@ -505,16 +505,16 @@ class Plugin
 			if (!(bool) $this->options['no_overwrite_title_description']) {
 				$wp_filetype = wp_check_filetype(basename($target_path), null);
 				$info = pathinfo($target_path);
-				$attachment = array(
-				'ID' => $attachment_id,
-				'post_author' => $post_data['post_author'],
-				'post_content' => $post_data['post_content'],
-				'post_excerpt' => $post_data['post_content'],
-				'post_mime_type' => $wp_filetype['type'],
-				'post_name' => $info['filename'],
-				'post_status' => 'inherit',
-				'post_title' => $post_data['post_title'],
-				);
+				$attachment = [
+					'ID' => $attachment_id,
+					'post_author' => $post_data['post_author'],
+					'post_content' => $post_data['post_content'],
+					'post_excerpt' => $post_data['post_content'],
+					'post_mime_type' => $wp_filetype['type'],
+					'post_name' => $info['filename'],
+					'post_status' => 'inherit',
+					'post_title' => $post_data['post_title'],
+				];
 				$attachment_id = wp_update_post($attachment);
 				do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
 			}
@@ -526,15 +526,15 @@ class Plugin
 			 */
 			$wp_filetype = wp_check_filetype(basename($target_path), null);
 			$info = pathinfo($target_path);
-			$attachment = array(
-			'post_author' => $post_data['post_author'],
-			'post_content' => $post_data['post_content'],
-			'post_excerpt' => $post_data['post_content'],
-			'post_mime_type' => $wp_filetype['type'],
-			'post_name' => $info['filename'],
-			'post_status' => 'inherit',
-			'post_title' => $post_data['post_title'],
-			);
+			$attachment = [
+				'post_author' => $post_data['post_author'],
+				'post_content' => $post_data['post_content'],
+				'post_excerpt' => $post_data['post_content'],
+				'post_mime_type' => $wp_filetype['type'],
+				'post_name' => $info['filename'],
+				'post_status' => 'inherit',
+				'post_title' => $post_data['post_title'],
+			];
 			$attachment_id = wp_insert_attachment($attachment, $target_path);
 			$this->thumbnailsAndMeta($attachment_id, $target_path);
 			do_action('mhm-attachment-from-ftp/attachment_created', $attachment_id);
@@ -622,7 +622,7 @@ class Plugin
 		)
 		*/
 
-		$GPS = array();
+		$GPS = [];
 
 		if (isset($exif['GPSLatitude'])) {
 			$GPS['lat']['deg'] = explode('/', $exif['GPSLatitude'][0]);
@@ -786,14 +786,14 @@ class Plugin
 	public function postLink($photo)
 	{
 		$existing = new WP_Query([
-		'post_type' => 'photo',
-		'meta_query' => [
-			[
-				'key' => 'video_ref',
-				'value' => $this->flickrEmbedUrl($photo),
-				'compare' => '=',
+			'post_type' => 'photo',
+			'meta_query' => [
+				[
+					'key' => 'video_ref',
+					'value' => $this->flickrEmbedUrl($photo),
+					'compare' => '=',
+				]
 			]
-		]
 		]);
 
 		if (!empty($existing->posts)) {
@@ -835,11 +835,11 @@ class Plugin
 
 	public function flickrListView()
 	{
-		$this->flickr_config = array(
+		$this->flickr_config = [
 			'flickr_key' => esc_attr(get_option('flickr_key')),
 			'flickr_secret' => esc_attr(get_option('flickr_secret')),
 			'flickr_userid' => esc_attr(get_option('flickr_userid'))
-		);
+		];
 
 		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
 			//$upload_dir = wp_upload_dir();
@@ -853,7 +853,7 @@ class Plugin
 
 			$FlickrRequestString='https://api.flickr.com/services/rest/?method=flickr.photos.search&format=json&nojsoncallback=1&api_key='.$this->flickr_config['flickr_key'].'&secret='.$this->flickr_config['flickr_secret'].'&user_id='.$this->flickr_config['flickr_userid'].'&extras=description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o&page=' .$pagenumber. '&per_page='.$per_page;
 
-			$out=array();
+			$out=[];
 
 			if (($image_data=$this->getRemoteFileContents($FlickrRequestString))) {
 				$data = json_decode($image_data, true);
@@ -934,12 +934,12 @@ class Plugin
 
 	public function flickrSetView()
 	{
-		$this->flickr_config = array(
+		$this->flickr_config = [
 			'flickr_key' => esc_attr(get_option('flickr_key')),
 			'flickr_secret' => esc_attr(get_option('flickr_secret')),
 			//'flickr_userid' => esc_attr(get_option('flickr_userid'))
 			'flickr_userid' => '87637435@N00'
-		);
+		];
 
 		if (!empty($this->flickr_config['flickr_key']) && !empty($this->flickr_config['flickr_secret']) && !empty($this->flickr_config['flickr_userid'])) {
 			$per_page = 500;
@@ -1085,7 +1085,7 @@ class Plugin
 
 	public function addMetaFields()
 	{
-		register_rest_field('post', 'video_ref', array(
+		register_rest_field('post', 'video_ref', [
 			'get_callback' => function ($args) {
 				return get_post_meta($args['id'], 'video_ref', true);
 			},
@@ -1102,13 +1102,13 @@ class Plugin
 				}
 				return true;
 			},
-			'schema' => array(
+			'schema' => [
 				'description' => __('Video reference'),
 				'type'        => 'string'
-			),
-		));
+			],
+		]);
 
-		register_rest_field('post', 'location', array(
+		register_rest_field('post', 'location', [
 			'get_callback' => function ($args) {
 				return get_post_meta($args['id'], 'video_ref', true);
 			},
@@ -1125,11 +1125,11 @@ class Plugin
 				}
 				return true;
 			},
-			'schema' => array(
+			'schema' => [
 				'description' => __('Geographic location'),
 				'type'        => 'string'
-			),
-		));
+			],
+		]);
 	}
 
 	public function maybeAddTerms($post, $request, $update = true)
