@@ -6,7 +6,7 @@ Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.7.0
+Version: 0.8.0
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -47,7 +47,7 @@ class Plugin
 		if (is_array($content)) {
 			$content = print_r($content, 1);
 		}
-		error_log(date('r').chr(9).$title.chr(9).$content.chr(10), 3, WP_CONTENT_DIR.'/mhm_attachment_from_ftp.error.log');
+		error_log(date('r') . chr(9) . $title . chr(9) . $content . chr(10), 3, WP_CONTENT_DIR . '/mhm_attachment_from_ftp.error.log');
 	}
 
 	private function success_log($title, $content = '')
@@ -55,13 +55,13 @@ class Plugin
 		if (is_array($content)) {
 			$content = print_r($content, 1);
 		}
-		error_log(date('r').chr(9).$title.chr(9).$content.chr(10), 3, WP_CONTENT_DIR.'/mhm_attachment_from_ftp.success.log');
+		error_log(date('r') . chr(9) . $title . chr(9) . $content . chr(10), 3, WP_CONTENT_DIR . '/mhm_attachment_from_ftp.success.log');
 	}
 
 	private function legibleSize($file_path, $decimals = 2)
 	{
 		$bytes = @filesize($file_path);
-		$size = [' B.',' Kb.',' Mb.',' Gb.',' Tb.',' Pb.'];
+		$size = [' B.', ' Kb.', ' Mb.', ' Gb.', ' Tb.', ' Pb.'];
 		$factor = floor((strlen($bytes) - 1) / 3);
 		return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
 	}
@@ -179,12 +179,12 @@ class Plugin
 			}
 
 			if ($filesize = round(filesize($file_path) / 1024 / 1024) > 10) {
-				do_action('mhm-attachment-from-ftp/too_big', $file_path, $filesize.' Mb');
-				$this->error_log('mhm-attachment-from-ftp/too_big', [$file_path, $filesize.' Mb']);
+				do_action('mhm-attachment-from-ftp/too_big', $file_path, $filesize . ' Mb');
+				$this->error_log('mhm-attachment-from-ftp/too_big', [$file_path, $filesize . ' Mb']);
 				continue;
 			}
 
-			$target_folder = WP_CONTENT_DIR.'/uploads'.date('/Y/m/', strtotime($exif['DateTimeOriginal']));
+			$target_folder = WP_CONTENT_DIR . '/uploads' . date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
 			$entries[strtotime($exif['DateTime'])] = [
 				'post_author' => $this->author_id,
@@ -193,7 +193,7 @@ class Plugin
 				'post_tags' => $exif['iptc']['keywords'],
 				'file_date' => $exif['DateTimeOriginal'],
 				'source_path' => $file_path,
-				'target_path' => $target_folder.$file->getFileName(),
+				'target_path' => $target_folder . $file->getFileName(),
 				'target_folder' => $target_folder,
 				'file_name' => $file->getFileName(),
 				'post_meta' => [],
@@ -321,7 +321,7 @@ class Plugin
 		if (!$sourceFolder) {
 			$this->sourceFolderUndefined();
 		} else {
-			$this->sourceFolder = trailingslashit($upload_dir['basedir']).esc_attr($this->options['source_folder']);
+			$this->sourceFolder = trailingslashit($upload_dir['basedir']) . esc_attr($this->options['source_folder']);
 
 			if (!is_dir($this->sourceFolder)) {
 				@mkdir($this->sourceFolder, 0755, true);
@@ -470,7 +470,7 @@ class Plugin
 		$newArr = [];
 
 		foreach ($array as $key => $value) {
-			$newArr[ $key ] = (is_array($value) ? $this->arrayMapRecursive($function, $value) : (is_array($function) ? call_user_func_array($function, $value) : $function($value)));
+			$newArr[$key] = (is_array($value) ? $this->arrayMapRecursive($function, $value) : (is_array($function) ? call_user_func_array($function, $value) : $function($value)));
 		}
 
 		return $newArr;
@@ -495,7 +495,7 @@ class Plugin
 		$dir = wp_upload_dir();
 
 		// Is the file somewhere in the in uploads directory?
-		if (false !== strpos($path, $dir['basedir'].'/')) {
+		if (false !== strpos($path, $dir['basedir'] . '/')) {
 			$file = basename($path);
 			$query_args = [
 				'post_type' => 'attachment',
@@ -545,6 +545,7 @@ class Plugin
 			 * appropriate blocking option “no_overwrite_title_description” is not activated in the plugin options.
 			 */
 
+			$this->thumbnailsAndMeta($attachment_id, $target_path);
 			if (!(bool) $this->options['no_overwrite_title_description']) {
 				$wp_filetype = wp_check_filetype(basename($target_path), null);
 				$info = pathinfo($target_path);
@@ -562,7 +563,6 @@ class Plugin
 				do_action('mhm-attachment-from-ftp/title_description_overwritten', $attachment_id, $attachment);
 				$this->success_log('mhm-attachment-from-ftp/title_description_overwritten', [$attachment_id, $attachment]);
 			}
-			$this->thumbnailsAndMeta($attachment_id, $target_path);
 			do_action('mhm-attachment-from-ftp/attachment_updated', $attachment_id);
 			$this->success_log('mhm-attachment-from-ftp/attachment_updates', [$attachment_id]);
 		} else {
@@ -604,7 +604,7 @@ class Plugin
 	 */
 	public function thumbnailsAndMeta($post_id, $path)
 	{
-		require_once ABSPATH.'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		// This generates the thumbnail file/s.
 		$attach_data = wp_generate_attachment_metadata($post_id, $path);
@@ -722,7 +722,7 @@ class Plugin
 		}
 
 		if ($exif['GPSLatitudeDecimal'] && $exif['GPSLongitudeDecimal']) {
-			$exif['GPSCalculatedDecimal'] = $exif['GPSLatitudeDecimal'].','.$exif['GPSLongitudeDecimal'];
+			$exif['GPSCalculatedDecimal'] = $exif['GPSLatitudeDecimal'] . ',' . $exif['GPSLongitudeDecimal'];
 		} else {
 			$exif['GPSCalculatedDecimal'] = null;
 		}
@@ -790,26 +790,26 @@ class Plugin
 							$keyword = iconv('ASCII', 'UTF-8//IGNORE', $keyword);
 						}
 					}
-					$keywords = '<p><em>Keywords</em>: ' . implode(', ', array_values($exif['iptc']['keywords'])).'</p>';
+					$keywords = '<p><em>Keywords</em>: ' . implode(', ', array_values($exif['iptc']['keywords'])) . '</p>';
 				}
 				$calculated_decimal = '<p>No location data</p>';
 				if (!empty($exif['GPSCalculatedDecimal'])) {
-					$calculated_decimal = '<p><em>GPSCalculatedDecimal</em>: ' . $exif['GPSCalculatedDecimal'].'</p>';
+					$calculated_decimal = '<p><em>GPSCalculatedDecimal</em>: ' . $exif['GPSCalculatedDecimal'] . '</p>';
 				}
 
 				$make_model = implode(' ', [$exif['Make'] ?? '', $exif['Model'] ?? '']);
 				if (empty($make_model)) {
 					$make_model = 'Unknown';
 				}
-				$make_model = '<p><em>Camera</em>: ' . $make_model.'</p>';
+				$make_model = '<p><em>Camera</em>: ' . $make_model . '</p>';
 
-				$file_name = '<p>' . $file->getFileName().'</p>';
+				$file_name = '<p>' . $file->getFileName() . '</p>';
 
-				$file_size = '<p>' . $this->legibleSize($file->getPathname()).'</p>';
+				$file_size = '<p>' . $this->legibleSize($file->getPathname()) . '</p>';
 
-				$details = $keywords.$calculated_decimal.$make_model.$file_name.$file_size;
+				$details = $keywords . $calculated_decimal . $make_model . $file_name . $file_size;
 
-				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><td><img style="max-width: 300px" src="' .$file_url. '"></td><td><p><strong>' .(!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title').'</strong></p>'.$details. '</td><!--<td><pre>' .print_r($exif, 1). '</pre></td>--></tr>';
+				$file_html[] = '<tr id="post-IMAGEID" class="post-IMAGEID"><td><img style="max-width: 300px" src="' . $file_url . '"></td><td><p><strong>' . (!empty($exif['iptc']['graphic_name']) ? $exif['iptc']['graphic_name'] : 'No image title') . '</strong></p>' . $details . '</td><!--<td><pre>' . print_r($exif, 1) . '</pre></td>--></tr>';
 			}
 			printf(
 				'<div class="wrap">
@@ -844,7 +844,7 @@ class Plugin
 				if (!update_post_meta($post->ID, 'video_ref', $value)) {
 					return new \WP_Error(
 						'rest_comment_video_ref_failed',
-						__('Post ' .$post->ID. ' was not updated video_ref with value “' .$value. '”.'),
+						__('Post ' . $post->ID . ' was not updated video_ref with value “' . $value . '”.'),
 						['status' => 500]
 					);
 				}
@@ -867,7 +867,7 @@ class Plugin
 				if (!update_post_meta($post->ID, 'location', $value)) {
 					return new \WP_Error(
 						'rest_comment_location_failed',
-						__('Post ' .$post->ID. ' was not updated location with value “' .$value. '”.'),
+						__('Post ' . $post->ID . ' was not updated location with value “' . $value . '”.'),
 						['status' => 500]
 					);
 				}
@@ -883,10 +883,10 @@ class Plugin
 	public function maybeAddTerms($post, $request, $update = true)
 	{
 		$params = $request->get_params();
-		if (isset($params['meta']) && isset($params['meta']['tags']) && ! empty($params['meta']['tags'])) {
+		if (isset($params['meta']) && isset($params['meta']['tags']) && !empty($params['meta']['tags'])) {
 			wp_set_object_terms($post->ID, $params['meta']['tags'], 'post_tag', $update);
 		}
-		if (isset($params['meta']) && isset($params['meta']['categories']) && ! empty($params['meta']['categories'])) {
+		if (isset($params['meta']) && isset($params['meta']['categories']) && !empty($params['meta']['categories'])) {
 			wp_set_object_terms($post->ID, $params['meta']['categories'], 'category', $update);
 		}
 	}
