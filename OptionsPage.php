@@ -6,13 +6,13 @@ class OptionsPage
 {
 	public function __construct()
 	{
-		add_action('admin_menu', array($this, 'createAdminMenu'));
+		add_action('admin_menu', [$this, 'createAdminMenu']);
 	}
 
 	public function createAdminMenu()
 	{
-		add_submenu_page('options-general.php', __('Attachments from FTP', 'mhm_attachment_from_ftp'), __('Attachments from FTP', 'mhm_attachment_from_ftp'), 'manage_options', 'mhm_attachment_from_ftp', array($this, 'settingsPage'));
-		add_action('admin_init', array($this, 'registerPluginSettings'));
+		add_submenu_page('options-general.php', __('Attachments from FTP', 'mhm_attachment_from_ftp'), __('Attachments from FTP', 'mhm_attachment_from_ftp'), 'manage_options', 'mhm_attachment_from_ftp', [$this, 'settingsPage']);
+		add_action('admin_init', [$this, 'registerPluginSettings']);
 	}
 
 	public function registerPluginSettings()
@@ -23,7 +23,7 @@ class OptionsPage
 	public function settingsPage()
 	{
 		echo '<div class="wrap">
-            <h1>'._x('Attachments from FTP', 'Admin page title', 'mhm_attachment_from_ftp').'</h1>
+            <h1>' . _x('Attachments from FTP', 'Admin page title', 'mhm_attachment_from_ftp') . '</h1>
             <form method="post" action="options.php">
             ';
 
@@ -32,73 +32,73 @@ class OptionsPage
 
 		echo '<table class="form-table">
             <tr>
-                <th scope="row">'.__('Source folder', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Source folder', 'mhm_attachment_from_ftp') . '</th>
                 <td>
-                    '.$this->foldersAsSelect($this->getBaseFilePath(), 'mhm_attachment_from_ftp[source_folder]', esc_attr($options['source_folder'])).'
-                    <p class="description">'.__('This is a list of all the direct subfolders in your WordPress uploads folder.', 'mhm_attachment_from_ftp').'</p>
-                    <p class="description">'.__('Whichever folder is selected here will be watched by this plugin for new additions.', 'mhm_attachment_from_ftp').'</p>
-                    <p class="description">'.__('If the folder you want to use is not in the list, make sure that you have created it on the server and that the correct access rights (0755) are set, so that WordPress can read it.', 'mhm_attachment_from_ftp').'</p>
+                    ' . $this->foldersAsSelect($this->getBaseFilePath(), 'mhm_attachment_from_ftp[source_folder]', esc_attr($options['source_folder'])) . '
+                    <p class="description">' . __('This is a list of all the direct subfolders in your WordPress uploads folder.', 'mhm_attachment_from_ftp') . '</p>
+                    <p class="description">' . __('Whichever folder is selected here will be watched by this plugin for new additions.', 'mhm_attachment_from_ftp') . '</p>
+                    <p class="description">' . __('If the folder you want to use is not in the list, make sure that you have created it on the server and that the correct access rights (0755) are set, so that WordPress can read it.', 'mhm_attachment_from_ftp') . '</p>
                 </td>
             </tr>
             <tr>
-                <th scope="row">'.__('Post author', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Post author', 'mhm_attachment_from_ftp') . '</th>
                 <td>
-                    '.wp_dropdown_users(array(
-						'echo' => false,
-						'selected' => (int) $options['author_id'],
-						'name' => 'mhm_attachment_from_ftp[author_id]',
-						'show_option_none' => __('None', 'mhm_attachment_from_ftp'),
-					)).'
-                    <p class="description">'.__('To which author should new attachments be attributed?', 'mhm_attachment_from_ftp').'</p>
+                    ' . wp_dropdown_users([
+			'echo' => false,
+			'selected' => (int) $options['author_id'],
+			'name' => 'mhm_attachment_from_ftp[author_id]',
+			'show_option_none' => __('None', 'mhm_attachment_from_ftp'),
+		]) . '
+                    <p class="description">' . __('To which author should new attachments be attributed?', 'mhm_attachment_from_ftp') . '</p>
                 </td>
             </tr>
             <tr>
-                <th scope="row">'.__('Number of files to process', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Number of files to process', 'mhm_attachment_from_ftp') . '</th>
                 <td>
                     <select name="mhm_attachment_from_ftp[files_per_batch]" id="files_per_batch">
-                        <option value="10"'.selected((int) $options['files_per_batch'], 10, false).'>10</option>
-                        <option value="25"'.selected((int) $options['files_per_batch'], 25, false).'>25</option>
-                        <option value="50"'.selected((int) $options['files_per_batch'], 50, false).'>50</option>
-                        <option value="100"'.selected((int) $options['files_per_batch'], 100, false).'>100</option>
+                        <option value="10"' . selected((int) $options['files_per_batch'], 10, false) . '>10</option>
+                        <option value="25"' . selected((int) $options['files_per_batch'], 25, false) . '>25</option>
+                        <option value="50"' . selected((int) $options['files_per_batch'], 50, false) . '>50</option>
+                        <option value="100"' . selected((int) $options['files_per_batch'], 100, false) . '>100</option>
                     </select>
-                    <p class="description">'.__('The maximum number of files to process in a single batch. This number should be kept reasonably low unless you have a high-performance server.', 'mhm_attachment_from_ftp').'</p>
-                    <p class="description">'.__('The plugin re-generates thumbnails in several sizes each time it adds or updates an Attachment, which can require a little performance from the server.', 'mhm_attachment_from_ftp').'</p>
-                    <p class="description">'.__('If WordPress tries to process too many files in one go, then your server may experience memory issues.', 'mhm_attachment_from_ftp').'</p>
+                    <p class="description">' . __('The maximum number of files to process in a single batch. This number should be kept reasonably low unless you have a high-performance server.', 'mhm_attachment_from_ftp') . '</p>
+                    <p class="description">' . __('The plugin re-generates thumbnails in several sizes each time it adds or updates an Attachment, which can require a little performance from the server.', 'mhm_attachment_from_ftp') . '</p>
+                    <p class="description">' . __('If WordPress tries to process too many files in one go, then your server may experience memory issues.', 'mhm_attachment_from_ftp') . '</p>
                 </td>
             </tr>
             <tr valign="top">
-                <th scope="row">'.__('Do not overwrite existing titles or descriptions', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Do not overwrite existing titles or descriptions', 'mhm_attachment_from_ftp') . '</th>
                 <td>
                     <p class="description">
-                        <input type="checkbox" name="mhm_attachment_from_ftp[no_overwrite_title_description]" value="1" '.checked((bool) $options['no_overwrite_title_description'], true, false).'>
-                        '.__('If this checkbox is selected, then titles and descriptions in existing Attachments will not be overwritten when importing newer versions of existing files.', 'mhm_attachment_from_ftp').'
+                        <input type="checkbox" name="mhm_attachment_from_ftp[no_overwrite_title_description]" value="1" ' . checked((bool) $options['no_overwrite_title_description'], true, false) . '>
+                        ' . __('If this checkbox is selected, then titles and descriptions in existing Attachments will not be overwritten when importing newer versions of existing files.', 'mhm_attachment_from_ftp') . '
                     </p>
                 </td>
             </tr>
             <tr valign="top">
-                <th scope="row">'.__('Notify when an error occurs', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Notify when an error occurs', 'mhm_attachment_from_ftp') . '</th>
                 <td>
                     <p class="description">
-                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_error]" value="1" '.checked((bool) $options['notify_error'], true, false).' />
-                        '.__('If this checkbox is selected, the site administrator will receive an email when an error occurs during the import process.', 'mhm_attachment_from_ftp').'
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_error]" value="1" ' . checked((bool) $options['notify_error'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email when an error occurs during the import process.', 'mhm_attachment_from_ftp') . '
                     </p>
                 </td>
             </tr>
             <tr valign="top">
-                <th scope="row">'.__('Notify on success', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Notify on success', 'mhm_attachment_from_ftp') . '</th>
                 <td>
                     <p class="description">
-                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_success]" value="1" '.checked((bool) $options['notify_success'], true, false).' />
-                        '.__('If this checkbox is selected, the site administrator will receive an email when the import process is successful.', 'mhm_attachment_from_ftp').'
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_success]" value="1" ' . checked((bool) $options['notify_success'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email when the import process is successful.', 'mhm_attachment_from_ftp') . '
                     </p>
                 </td>
             </tr>
             <tr valign="top">
-                <th scope="row">'.__('Notify on regular', 'mhm_attachment_from_ftp').'</th>
+                <th scope="row">' . __('Notify on regular', 'mhm_attachment_from_ftp') . '</th>
                 <td>
                     <p class="description">
-                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_regular]" value="1" '.checked((bool) $options['notify_regular'], true, false).' />
-                        '.__('If this checkbox is selected, the site administrator will receive an email for all actions within the import process.', 'mhm_attachment_from_ftp').'
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_regular]" value="1" ' . checked((bool) $options['notify_regular'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email for all actions within the import process.', 'mhm_attachment_from_ftp') . '
                     </p>
                 </td>
             </tr>
@@ -126,14 +126,14 @@ class OptionsPage
 		$rootname = basename($path);
 
 		if ($includeParentFolder) {
-			$prefixvalue_subfolder = $rootname.DIRECTORY_SEPARATOR;
-			$prefixlabel_subfolder = $rootname.DIRECTORY_SEPARATOR;
+			$prefixvalue_subfolder = $rootname . DIRECTORY_SEPARATOR;
+			$prefixlabel_subfolder = $rootname . DIRECTORY_SEPARATOR;
 		} else {
 			$prefixvalue_subfolder = '';
 			$prefixlabel_subfolder = '';
 		}
 
-		$folders = array();
+		$folders = [];
 
 		$iterator = new \RecursiveIteratorIterator(
 			new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS), // Get the directories, excluding . and .. entries.
@@ -146,7 +146,7 @@ class OptionsPage
 
 		foreach ($iterator as $itref) {
 			if ($itref->isDir()) {
-				$folders[$prefixvalue_subfolder.$itref->getFilename()] = $prefixlabel_subfolder.$itref->getFilename();
+				$folders[$prefixvalue_subfolder . $itref->getFilename()] = $prefixlabel_subfolder . $itref->getFilename();
 			}
 		}
 
@@ -155,18 +155,18 @@ class OptionsPage
 		if ($includeParentFolder) {
 			// The first entry in the list is the parent folder, which has been used as the starting point for this function.
 			$folders = array_merge(
-				array($rootname => $rootname),
+				[$rootname => $rootname],
 				$folders
 			);
 		}
 
-		$options = array();
+		$options = [];
 
 		foreach ($folders as $key => $label) {
-			$options[] = '<option value="'.$key.'"'.selected($currentValue, $key, false).'>'.$label.'</option>';
+			$options[] = '<option value="' . $key . '"' . selected($currentValue, $key, false) . '>' . $label . '</option>';
 		}
 
-		return '<select name="'.$fieldname.'"><option value="">'.__('Select', 'mhm_attachment_from_ftp').'</option>'.implode('', $options).'</select>';
+		return '<select name="' . $fieldname . '"><option value="">' . __('Select', 'mhm_attachment_from_ftp') . '</option>' . implode('', $options) . '</select>';
 	}
 }
 
