@@ -6,7 +6,7 @@ Plugin URI: https://bitbucket.org/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.3
+Version: 0.8.4
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -546,7 +546,7 @@ class Plugin
 			 */
 
 			$this->thumbnailsAndMeta($attachment_id, $target_path);
-			if (!(bool) $this->options['no_overwrite_title_description']) {
+			if (!(bool) ($this->options['no_overwrite_title_description'] ?? false)) {
 				$wp_filetype = wp_check_filetype(basename($target_path), null);
 				$info = pathinfo($target_path);
 				$attachment = [
