@@ -168,7 +168,7 @@ class Plugin
 
 			$exif = $this->buildEXIFArray($file_path, false);
 
-			if (!$exif['DateTimeOriginal']) {
+			if (!$exif['DateTimeOriginal'] ?? false) {
 				/*
 				 * Only images where the original capture date can be identified
 				 * can currently be processed.
