@@ -214,8 +214,8 @@ class Plugin
 		}
 
 		if (empty($entries)) {
-			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->basePath, $files);
-			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->basePath, $files]);
+			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->sourceFolder, $files);
+			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->sourceFolder, $files]);
 			exit;
 		}
 
