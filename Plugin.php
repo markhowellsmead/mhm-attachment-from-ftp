@@ -6,7 +6,7 @@ Plugin URI: https://bitbucket.org/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.5
+Version: 0.8.6
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -15,7 +15,6 @@ use WP_Query;
 
 class Plugin
 {
-	public $wpversion = '5.3';
 	public $frequency = 'minute';
 	private $sourceFolder = '';
 	private $author_id = -1;
@@ -33,7 +32,6 @@ class Plugin
 
 		$this->setThings();
 
-		add_action('admin_init', [$this, 'checkVersion']);
 		add_action('admin_menu', [$this, 'adminListViewPages']);
 		add_filter('cron_schedules', [$this, 'cronInterval']);
 		add_action('mhm_attachment_from_ftp_check_folder', [$this, 'checkFolder']);
@@ -68,8 +66,6 @@ class Plugin
 
 	public function activation()
 	{
-		$this->checkVersion();
-
 		if (!wp_next_scheduled('mhm_attachment_from_ftp_check_folder')) {
 			wp_schedule_event(time(), $this->frequency, 'mhm_attachment_from_ftp_check_folder');
 		}
@@ -80,43 +76,6 @@ class Plugin
 	{
 		wp_unschedule_event(time(), 'mhm_attachment_from_ftp_check_folder');
 		wp_clear_scheduled_hook('mhm_attachment_from_ftp_check_folder');
-	}
-
-	public function checkVersion()
-	{
-		// Check that this plugin is compatible with the current version of WordPress
-		if (!$this->compatibleVersion()) {
-			if (is_plugin_active('mhm-attachment-from-ftp')) {
-				deactivate_plugins('mhm-attachment-from-ftp');
-				add_action('admin_notices', [$this, 'disabledNotice']);
-				if (isset($_GET['activate'])) {
-					unset($_GET['activate']);
-				}
-			}
-		}
-	}
-
-	public function disabledNotice()
-	{
-		$message = sprintf(
-			__('The plugin “%1$s” requires WordPress %2$s or higher!', 'mhm-attachment-from-ftp'),
-			_x('Attachments from FTP', 'The name of the plugin', 'mhm-attachment-from-ftp'),
-			$this->wpversion
-		);
-
-		printf(
-			'<div class="notice notice-error is-dismissible"><p>%1$s</p></div>',
-			$message
-		);
-	}
-
-	private function compatibleVersion()
-	{
-		if (version_compare($GLOBALS['wp_version'], $this->wpversion, '<')) {
-			return false;
-		}
-
-		return true;
 	}
 
 	public function cronInterval()
@@ -168,7 +127,7 @@ class Plugin
 
 			$exif = $this->buildEXIFArray($file_path, false);
 
-			if (!$exif['DateTimeOriginal'] ?? false) {
+			if (!($exif['DateTimeOriginal'] ?? false)) {
 				/*
 				 * Only images where the original capture date can be identified
 				 * can currently be processed.
