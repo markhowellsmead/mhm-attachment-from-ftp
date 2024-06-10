@@ -6,7 +6,7 @@ Plugin URI: https://bitbucket.org/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.4
+Version: 0.8.5
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -168,7 +168,7 @@ class Plugin
 
 			$exif = $this->buildEXIFArray($file_path, false);
 
-			if (!$exif['DateTimeOriginal']) {
+			if (!$exif['DateTimeOriginal'] ?? false) {
 				/*
 				 * Only images where the original capture date can be identified
 				 * can currently be processed.
@@ -214,8 +214,8 @@ class Plugin
 		}
 
 		if (empty($entries)) {
-			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->basePath, $files);
-			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->basePath, $files]);
+			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->sourceFolder, $files);
+			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->sourceFolder, $files]);
 			exit;
 		}
 
