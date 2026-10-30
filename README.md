@@ -47,7 +47,7 @@ Notifications are sent to the site administrator email address (*Settings » Gen
 * If the file contains GPS data, the coordinates are converted to decimal values and passed on with the other import data. They are not stored by this plugin.
 * *Media » For import* lists the files which are currently waiting in the source folder, with a preview, title, keywords, GPS coordinates, camera and file size.
 * The plugin appends to two log files in ``wp-content``: ``mhm_attachment_from_ftp.success.log`` (imports and updates) and ``mhm_attachment_from_ftp.error.log`` (files which could not be processed, and configuration problems). They can be read in *Media » Import log*.
-* *Media » Import log* shows the entries of both log files, newest first, 100 per page, on the tabs *Errors* and *Success*. Long details can be expanded. In the *Success* tab, entries about a single Attachment show a thumbnail of the image, linked to the Attachment in the Media Library. The page is available to users who can manage options. The files are read from the end, so that even a large log file loads quickly. The log files are not trimmed automatically.
+* *Media » Import log* shows the entries of both log files, newest first, 100 per page, on the tabs *Errors* and *Success*. Long details can be expanded. The checkboxes above the list choose which types of entries (events) are shown, and how many entries there are of each type. The pagination follows the filter. In the *Success* tab, entries about a single Attachment show a thumbnail of the image, linked to the Attachment in the Media Library. The page is available to users who can manage options. The files are read from the end, so that even a large log file loads quickly. The log files are not trimmed automatically.
 * A pre-existing Attachment will be updated with the *Title* and *Caption* of the new image file. Any former, manually-edited caption or title will be overwritten unless the plugin option *Do not overwrite* is selected.
 
 ## Detailed process description
@@ -155,6 +155,9 @@ Use this code freely, widely and for free. Provision of this code provides and i
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
 
 ## Changelog
+
+### 0.9.2
+* New: *Media » Import log* has a filter to choose which types of entries are displayed, with the number of entries of each type.
 
 ### 0.9.1
 * New: The *Success* tab of *Media » Import log* shows a preview thumbnail of the image for entries about an Attachment.

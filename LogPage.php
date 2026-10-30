@@ -80,12 +80,19 @@ class LogPage
 		$current = isset($_GET['log'], $logs[$_GET['log']]) ? sanitize_key($_GET['log']) : 'error';
 		$file = $logs[$current]['file'];
 
-		$total = $this->countEntries($file);
+		// The event types which are in this log, with the number of entries of each type.
+		$type_counts = $this->titleCounts($file);
+		$selected = $this->selectedEvents($type_counts);
+
+		$total = null === $selected ? array_sum($type_counts) : array_sum(array_intersect_key($type_counts, array_flip($selected)));
 		$pages = max(1, (int) ceil($total / self::PER_PAGE));
 		$paged = min(max(1, isset($_GET['paged']) ? absint($_GET['paged']) : 1), $pages);
-		$entries = $this->readEntries($file, ($paged - 1) * self::PER_PAGE, self::PER_PAGE);
+		$entries = $this->readEntries($file, ($paged - 1) * self::PER_PAGE, self::PER_PAGE, $selected);
 
 		$base_url = admin_url('upload.php?page=' . self::PAGE . '&log=' . $current);
+		if (null !== $selected) {
+			$base_url = add_query_arg(['events' => $selected], $base_url);
+		}
 
 		echo '<div class="wrap"><h1>' . esc_html__('Import log', 'mhm_attachment_from_ftp') . '</h1>';
 
@@ -101,10 +108,12 @@ class LogPage
 		}
 		echo '</h2>';
 
-		if (empty($entries)) {
+		if (empty($type_counts)) {
 			echo '<p>' . esc_html__('There are no entries in this log.', 'mhm_attachment_from_ftp') . '</p></div>';
 			return;
 		}
+
+		$this->filterForm($current, $type_counts, $selected);
 
 		$this->pagination($base_url, $paged, $pages, $total);
 
@@ -136,6 +145,65 @@ class LogPage
 		$this->pagination($base_url, $paged, $pages, $total);
 
 		echo '</div>';
+	}
+
+	/**
+	 * The event types which have been chosen in the filter.
+	 *
+	 * @param array $type_counts The event types of the log (as keys).
+	 *
+	 * @return string[]|null The chosen event types, or null if the log is not filtered.
+	 */
+	private function selectedEvents($type_counts)
+	{
+		$requested = isset($_GET['events']) ? array_map('sanitize_text_field', array_map('wp_unslash', (array) $_GET['events'])) : [];
+		$selected = array_values(array_intersect(array_keys($type_counts), $requested));
+
+		// Choosing all types, or none at all, is the same as not filtering.
+		return (empty($selected) || count($selected) === count($type_counts)) ? null : $selected;
+	}
+
+	/**
+	 * The form with which the types of entries to display are chosen.
+	 */
+	private function filterForm($current, $type_counts, $selected)
+	{
+		if (count($type_counts) < 2) {
+			return;
+		}
+
+		uksort($type_counts, function ($a, $b) {
+			return strcasecmp($this->eventLabel($a), $this->eventLabel($b));
+		});
+
+		echo '<form method="get" action="' . esc_url(admin_url('upload.php')) . '" style="margin: 1em 0">
+			<input type="hidden" name="page" value="' . esc_attr(self::PAGE) . '">
+			<input type="hidden" name="log" value="' . esc_attr($current) . '">
+			<fieldset><legend><strong>' . esc_html__('Show these types of entries', 'mhm_attachment_from_ftp') . '</strong></legend>';
+
+		foreach ($type_counts as $title => $count) {
+			printf(
+				'<label style="display: inline-block; margin: 0.25em 1.5em 0.5em 0"><input type="checkbox" name="events[]" value="%1$s"%2$s> %3$s <span class="count">(%4$s)</span></label>',
+				esc_attr($title),
+				checked(null === $selected || in_array($title, $selected, true), true, false),
+				esc_html($this->eventLabel($title)),
+				esc_html(number_format_i18n($count))
+			);
+		}
+
+		echo '</fieldset><button type="submit" class="button">' . esc_html__('Filter', 'mhm_attachment_from_ftp') . '</button>';
+		if (null !== $selected) {
+			echo ' <a href="' . esc_url(admin_url('upload.php?page=' . self::PAGE . '&log=' . $current)) . '">' . esc_html__('Show all', 'mhm_attachment_from_ftp') . '</a>';
+		}
+		echo '</form>';
+	}
+
+	/**
+	 * The name of an event, without the prefix which all the plugin's events have.
+	 */
+	private function eventLabel($title)
+	{
+		return '' === $title ? __('(no name)', 'mhm_attachment_from_ftp') : preg_replace('~^mhm-attachment-from-ftp/~', '', $title);
 	}
 
 	/**
@@ -234,24 +302,34 @@ class LogPage
 	}
 
 	/**
-	 * Count the entries in a log file. The result is cached until the file changes.
+	 * Count the entries in a log file.
 	 */
 	public function countEntries($file)
 	{
+		return array_sum($this->titleCounts($file));
+	}
+
+	/**
+	 * Count the entries of each type (title) in a log file. The result is cached until the file changes.
+	 *
+	 * @return int[] The number of entries, with the title as the key.
+	 */
+	public function titleCounts($file)
+	{
 		if (!is_readable($file) || !($size = filesize($file))) {
-			return 0;
+			return [];
 		}
 
-		$cache_key = 'mhm_aff_logcount_' . md5($file);
+		$cache_key = 'mhm_aff_logtitles_' . md5($file);
 		$cached = get_transient($cache_key);
 		if (is_array($cached) && $cached['size'] === $size && $cached['mtime'] === filemtime($file)) {
-			return $cached['count'];
+			return $cached['counts'];
 		}
 
-		$count = 0;
+		$counts = [];
 		$handle = fopen($file, 'rb');
 		$buffer = '';
-		$pattern = '/^' . self::ENTRY_START . '/m';
+		$pattern = '/^' . self::ENTRY_START . '([^\t\r\n]*)/m';
 
 		while (!feof($handle)) {
 			$buffer .= fread($handle, self::CHUNK_SIZE);
@@ -264,13 +342,17 @@ class LogPage
 			$complete = false === $last_newline ? $buffer : substr($buffer, 0, $last_newline + 1);
 			$buffer = false === $last_newline ? '' : substr($buffer, $last_newline + 1);
 
-			$count += (int) preg_match_all($pattern, $complete);
+			if (preg_match_all($pattern, $complete, $matches)) {
+				foreach (array_count_values($matches[1]) as $title => $count) {
+					$counts[$title] = ($counts[$title] ?? 0) + $count;
+				}
+			}
 		}
 		fclose($handle);
 
-		set_transient($cache_key, ['size' => $size, 'mtime' => filemtime($file), 'count' => $count], DAY_IN_SECONDS);
+		set_transient($cache_key, ['size' => $size, 'mtime' => filemtime($file), 'counts' => $counts], DAY_IN_SECONDS);
 
-		return $count;
+		return $counts;
 	}
 
 	/**
@@ -279,17 +361,18 @@ class LogPage
 	 * @param string $file   The log file.
 	 * @param int    $offset How many of the newest entries to skip.
 	 * @param int    $limit  How many entries to return.
+	 * @param array  $titles Optional. Only return (and count, for the offset) entries of these types.
 	 *
 	 * @return array[] Entries (date, title, content), newest first.
 	 */
-	public function readEntries($file, $offset, $limit)
+	public function readEntries($file, $offset, $limit, $titles = null)
 	{
 		if (!is_readable($file) || !($position = filesize($file))) {
 			return [];
 		}
 
 		$handle = fopen($file, 'rb');
-		$pattern = '/^' . self::ENTRY_START . '/m';
+		$pattern = '/^' . self::ENTRY_START . '([^\t\r\n]*)/m';
 		$wanted = $offset + $limit;
 		$found = 0;
 		$entries = [];
@@ -311,10 +394,12 @@ class LogPage
 			$end = strlen($buffer);
 
 			for ($i = count($starts) - 1; $i >= 0; $i--) {
-				if ($found >= $offset && $found < $wanted) {
-					$entries[] = $this->parseEntry(substr($buffer, $starts[$i], $end - $starts[$i]));
+				if (null === $titles || in_array($matches[1][$i][0], $titles, true)) {
+					if ($found >= $offset && $found < $wanted) {
+						$entries[] = $this->parseEntry(substr($buffer, $starts[$i], $end - $starts[$i]));
+					}
+					$found++;
 				}
-				$found++;
 				$end = $starts[$i];
 			}
 
