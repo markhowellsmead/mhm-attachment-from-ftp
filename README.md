@@ -4,9 +4,7 @@ WordPress plugin. Watches a specified folder in your web hosting. If one or more
 This plugin works using the WordPress Cron API.
 
 ## Instructions
-This plugin is in development and **MIGHT CAUSE ERRORS!!!** Don't use it yet unless you're helping me to debug it.
-
-Detailed instructions will be added as development progresses. The first official version of the plugin will be available directly from the WordPress plugin directory as soon as it is released.
+This plugin has not yet reached version 1.0 and is not available from the WordPress plugin directory. Use it at your own risk.
 
 As this plugin works with existing WordPress data in the database, and moves files around on the server, make sure that you make a backup of your site and files before using it. Test it with a couple of files before you commit to using it for large numbers of files.
 
@@ -15,33 +13,40 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * Upload the folder ``mhm-attachment-from-ftp`` to your plugin directory and activate the plugin in the WordPress Admin area.
 * Create a direct subfolder in ``wp-content/uploads`` (or your equivalent) which the script will watch.
 * Select this folder and the desired author in the plugin settings. (*Settings » Attachments from FTP*.)
-* The plugin's function will be run once every hour by default. It works best if you ensure that a cron task is running on your server at least once per hour. [More information about WordPress cron](https://developer.wordpress.org/plugins/cron/).
-* If you want to run the check manually, you can use the [WP Crontrol](https://wordpress.org/plugins/wp-crontrol/) plugin. The hook name is ``mhm-attachment-from-ftp/check_folder``.
+* On activation, the plugin schedules a WordPress cron event which runs **every minute**. It works best if you ensure that a cron task is running on your server at least as often as you need the folder to be checked. [More information about WordPress cron](https://developer.wordpress.org/plugins/cron/).
+* If you want to run the check manually, you can use the [WP Crontrol](https://wordpress.org/plugins/wp-crontrol/) plugin. The hook name is ``mhm_attachment_from_ftp_check_folder``.
+* Nothing is processed until both a source folder and a post author have been selected.
 
 ## Plugin options
 * **Source folder**: the folder on the server which will be watched by the cron task for new image files.
 * **Post author**: the author in the website to whom new Attachments will be attributed.
-* **Number of files to process**: how many images to process in a single batch. (See plugin options for futher details.)
+* **Number of files to process**: how many images to process in a single batch (10, 25, 50 or 100). Each file requires thumbnails to be generated, so keep this number low unless you have a high-performance server.
 * **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
+* **Notify when an error occurs**, **Notify on success**, **Notify on regular**: these settings are saved, but are not currently used by the plugin and no emails are sent. Results are written to the log files. (See *Log files*.)
 
 ## Notes
-* Subfolders of your selected folder and “invisible” files - like ``DS_Store``, ``.`` and ``..`` paths - are automatically ignored.
-* The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.)
+* Files in subfolders of your selected folder are processed too. ``.DS_Store`` files and files which are not an allowed file type (JPEG, GIF, PNG, BMP and TIFF by default) are ignored.
+* The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.) The order in which files are processed is not guaranteed; do not rely on older photos being processed first.
+* Files larger than 10 MB are not processed and remain in the original folder.
 * Uploaded files must contain regular EXIF data relating to capture date.
 * The uploaded file may optionally - ideally - contain values for image title and image caption/description. In Adobe Lightroom, this information is edited using the fields *Title* and *Caption* (in the *EXIF and IPTC* view of the *Metadata* panel).
-* Older images - i.e. photos taken first - will be processed first.
 * A successfully processed file will be moved (not copied) to a destination folder within the regular WordPress uploads structure. The folder is determined from the original date and time when the photo was taken. (``DateTimeOriginal`` in the EXIF data.)
 * For example, a photo taken on 16th October 2016 will usually be moved to the folder ``wp-content/uploads/2016/10``.
 * If this data is not available in the EXIF, then the file cannot be processed and it will remain in the original folder to which you uploaded it.
-* Files whose names contain spaces will be automatically re-named, in order to avoid compatability issues. For example, a file ``2016.10.16 1234.jpg`` will become ``2016.10.16_1234.jpg``. This renaming happens when the file is moved.
+* Files whose names contain spaces will be automatically re-named, in order to avoid compatability issues. For example, a file ``2016.10.16 1234.jpg`` will become ``2016.10.16_1234.jpg``. This renaming happens as soon as the plugin looks at the file, even if the file is not processed afterwards.
 * If there is a file with the same (case-sensitive) name in the target directory, then it will be overwritten.
 * When the file has been copied to the target directory, the plugin generates new copies of any smaller files - e.g. thumbnails - which are defined in the general [Thumbnail Sizes](https://codex.wordpress.org/Post_Thumbnails#Thumbnail_Sizes) array.
 * This plugin doesn't create any additional images of its own.
 * If there is already an Attachment which refers to an image in precisely the same target location, then this entry will be updated and no new Attachment will be generated.
+* The IPTC *Object Name* (``2#005``) becomes the Attachment title and the IPTC caption (``2#120``) becomes its description and caption. The title is also used as the alternative text, if the Attachment does not already have one.
+* IPTC keywords are stored in the attachment metadata (``image_meta['keywords']``) by WordPress core when the attachment is generated. This plugin does not add or change them. It reads the keywords from the file itself only to show them in the *Media » For import* list, and to pass them on as ``post_tags`` in the data used by the ``mhm-attachment-from-ftp/finished`` action. The IPTC category is added to the attachment metadata as ``image_meta['category']``.
+* If the file contains GPS data, the coordinates are converted to decimal values and passed on with the other import data. They are not stored by this plugin.
+* *Media » For import* lists the files which are currently waiting in the source folder, with a preview, title, keywords, GPS coordinates, camera and file size.
+* The plugin appends to two log files in ``wp-content``: ``mhm_attachment_from_ftp.success.log`` (imports and updates) and ``mhm_attachment_from_ftp.error.log`` (files which could not be processed, and configuration problems).
 * A pre-existing Attachment will be updated with the *Title* and *Caption* of the new image file. Any former, manually-edited caption or title will be overwritten unless the plugin option *Do not overwrite* is selected.
 
 ## Detailed process description
-Once the plugin is active and the plugin options are set, then the plugin uses WordPress' internal “cron” process to check a folder on your web server once per hour. If there are any images in the folder, then these are destined to become Attachment entries, which you can view in the *Media* section of WordPress admin and use in your Posts or Pages.
+Once the plugin is active and the plugin options are set, then the plugin uses WordPress' internal “cron” process to check a folder on your web server every minute. If there are any images in the folder, then these are destined to become Attachment entries, which you can view in the *Media* section of WordPress admin and use in your Posts or Pages.
 
 So that a file can be correctly processed, the [EXIF data](https://photographylife.com/what-is-exif-data) needs to contain the original capture date and time of the photo. If you're uploading a normal photo, then this information is available. If you edit the photo in an image editing programme like Photoshop or Lightroom, then make sure that the export function doesn't remove the EXIF data. If you've given the photo a title and description in your image editing programme, this will be automatically added to the Attachment entry in WordPress.
 
@@ -65,8 +70,8 @@ If you upload a photo which you've already added, for example after re-editing, 
 
 ``mhm-attachment-from-ftp/finished`` fires when the process has completely finished.
 * Arguments:
-	* Files (array)
-	* Processed files (array)
+	* Entries which were prepared for processing (array)
+	* Number of files which were processed (integer)
 
 ``mhm-attachment-from-ftp/source-folder-undefined`` fires when the source folder is not defined.
 * Arguments:
@@ -74,7 +79,7 @@ If you upload a photo which you've already added, for example after re-editing, 
 
 ``mhm-attachment-from-ftp/post-author-undefined`` fires when the post author has not been correctly defined.
 * Arguments:
-	* Post author (integer)
+	* Source folder (string)
 
 ``mhm-attachment-from-ftp/source-folder-unavailable`` fires when the indicated source folder is not available on the server.
 * Arguments:
@@ -117,6 +122,7 @@ If you upload a photo which you've already added, for example after re-editing, 
 * Arguments:
 	* Attachment ID (integer)
 	* File path (string)
+	* Generated attachment metadata (array)
 
 ``mhm-attachment-from-ftp/too_big`` fires if a source file is too large. The current limit is 10Mb. This is in order to avoid massive files killing server resources.
 * Arguments:
@@ -132,6 +138,9 @@ If you upload a photo which you've already added, for example after re-editing, 
 * Arguments:
 	* Array of allowed file types (array)
 
+## REST API
+The plugin adds the post fields ``video_ref`` and ``location`` to the REST API for posts. When a post is saved through the REST API with ``meta.tags`` and/or ``meta.categories``, these values are assigned to the post as tags and categories.
+
 ## Author
 Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
 
@@ -139,9 +148,11 @@ Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
 Use this code freely, widely and for free. Provision of this code provides and implies no guarantee.
 
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
-* IPTC keywords are stored in the attachment metadata (`image_meta['keywords']`) by WordPress core when the attachment is generated. This plugin does not add or change them. It reads the keywords from the file itself only to show them in the attachment description and to assign them as tags to the post which can be created from the attachment.
 
 ## Changelog
+
+### 0.8.9
+* Documentation: The README now matches the behaviour of the plugin. Corrections: the cron task runs every minute (not hourly) and the hook name is ``mhm_attachment_from_ftp_check_folder``; subfolders are processed; files are not guaranteed to be processed oldest first; the *Notify…* options are not currently used; the arguments of three actions. Added the file size limit, the *For import* page, log files, how titles, keywords and GPS data are handled, and the REST fields.
 
 ### 0.8.8
 * The plugin's repository is now hosted on GitHub: https://github.com/markhowellsmead/mhm-attachment-from-ftp (previously Bitbucket). The Plugin URI has been updated.
