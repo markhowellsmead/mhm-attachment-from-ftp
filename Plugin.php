@@ -6,7 +6,7 @@ Plugin URI: https://bitbucket.org/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.6
+Version: 0.8.7
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -353,6 +353,9 @@ class Plugin
 	/**
 	 * Extend the basic meta data stored in the database with additional values.
 	 *
+	 * Keywords are not handled here: WordPress core already reads the IPTC keywords
+	 * (2#025) into `$meta['keywords']`, so they are left as core provides them.
+	 *
 	 * @param array  $meta            The array of meta data which WordPress usually stores in the database.
 	 * @param string $file            The fully-qualified path to the file being processed.
 	 * @param int    $sourceImageType The MIME type of the file being processed, in binary integer format.
@@ -372,7 +375,6 @@ class Plugin
 				$iptc = iptcparse($info['APP13']);
 				if ($iptc && isset($iptc['2#015'])) {
 					$meta['category'] = $iptc['2#015'];
-					$meta['keywords'] = $iptc['2#025'];
 				}
 			}
 		}

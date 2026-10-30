@@ -139,3 +139,9 @@ Mark Howells-Mead | www.permanenttourist.ch | Since 11th October 2016
 Use this code freely, widely and for free. Provision of this code provides and implies no guarantee.
 
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
+* IPTC keywords are stored in the attachment metadata (`image_meta['keywords']`) by WordPress core when the attachment is generated. This plugin does not add or change them. It reads the keywords from the file itself only to show them in the attachment description and to assign them as tags to the post which can be created from the attachment.
+
+## Changelog
+
+### 0.8.7
+* Fix: Stop overwriting the `keywords` value which WordPress core stores in the attachment's `image_meta`. Core already extracts the IPTC keywords; the plugin's own copy was unprocessed (no re-indexing or encoding handling) and could raise an undefined index warning for files with an IPTC category but no keywords.
