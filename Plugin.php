@@ -6,7 +6,7 @@ Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.8
+Version: 0.8.9
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
