@@ -28,6 +28,17 @@ class LogPage
 	 */
 	const DETAILS_LENGTH = 5000;
 
+	/**
+	 * Events whose details start with the ID of an Attachment (as the first value of the logged array).
+	 * A preview of the image is shown for these in the success log.
+	 */
+	const ATTACHMENT_EVENTS = [
+		'mhm-attachment-from-ftp/attachment_created',
+		'mhm-attachment-from-ftp/attachment_updates',
+		'mhm-attachment-from-ftp/title_description_overwritten',
+		'mhm-attachment-from-ftp/updated_attachment_metadata',
+	];
+
 	public function __construct()
 	{
 		add_action('admin_menu', [$this, 'createAdminMenu']);
@@ -97,7 +108,17 @@ class LogPage
 
 		$this->pagination($base_url, $paged, $pages, $total);
 
-		echo '<table class="wp-list-table widefat fixed striped"><thead><tr>
+		$show_preview = 'success' === $current;
+		if ($show_preview) {
+			// Load all the attachments of this page with a single query.
+			$attachment_ids = array_filter(array_map([$this, 'attachmentId'], $entries));
+			if ($attachment_ids) {
+				_prime_post_caches(array_unique($attachment_ids), false, false);
+			}
+		}
+
+		echo '<table class="wp-list-table widefat fixed striped"><thead><tr>'
+			. ($show_preview ? '<th scope="col" style="width: 100px">' . esc_html__('Preview', 'mhm_attachment_from_ftp') . '</th>' : '') . '
 			<th scope="col" style="width: 12em">' . esc_html__('Date', 'mhm_attachment_from_ftp') . '</th>
 			<th scope="col" style="width: 22em">' . esc_html__('Event', 'mhm_attachment_from_ftp') . '</th>
 			<th scope="col">' . esc_html__('Details', 'mhm_attachment_from_ftp') . '</th>
@@ -105,7 +126,7 @@ class LogPage
 
 		foreach ($entries as $entry) {
 			$timestamp = strtotime($entry['date']);
-			echo '<tr><td>' . esc_html($timestamp ? wp_date('Y-m-d H:i:s', $timestamp) : $entry['date']) . '</td>
+			echo '<tr>' . ($show_preview ? '<td>' . $this->preview($this->attachmentId($entry)) . '</td>' : '') . '<td>' . esc_html($timestamp ? wp_date('Y-m-d H:i:s', $timestamp) : $entry['date']) . '</td>
 				<td>' . esc_html($entry['title']) . '</td>
 				<td>' . $this->details($entry['content']) . '</td></tr>';
 		}
@@ -115,6 +136,43 @@ class LogPage
 		$this->pagination($base_url, $paged, $pages, $total);
 
 		echo '</div>';
+	}
+
+	/**
+	 * The ID of the Attachment which an entry is about, or 0 if it is not about a single Attachment.
+	 */
+	private function attachmentId($entry)
+	{
+		if (in_array($entry['title'], self::ATTACHMENT_EVENTS, true) && preg_match('/^Array\s*\(\s*\[0\]\s*=>\s*(\d+)\s/', $entry['content'], $matches)) {
+			return (int) $matches[1];
+		}
+
+		return 0;
+	}
+
+	/**
+	 * A thumbnail of an Attachment, linked to its edit screen. Always escaped.
+	 */
+	private function preview($attachment_id)
+	{
+		if (!$attachment_id) {
+			return '';
+		}
+
+		$image = 'attachment' === get_post_type($attachment_id) ? wp_get_attachment_image($attachment_id, 'thumbnail', false, ['style' => 'max-width: 80px; height: auto; display: block']) : '';
+		if (!$image) {
+			return '<span class="description">' . esc_html(sprintf(
+				/* translators: %d: Attachment ID */
+				__('Attachment %d: no image', 'mhm_attachment_from_ftp'),
+				$attachment_id
+			)) . '</span>';
+		}
+
+		return '<a href="' . esc_url(get_edit_post_link($attachment_id)) . '" title="' . esc_attr(sprintf(
+			/* translators: %d: Attachment ID */
+			__('Attachment %d', 'mhm_attachment_from_ftp'),
+			$attachment_id
+		)) . '">' . $image . '</a>';
 	}
 
 	private function pagination($base_url, $paged, $pages, $total)
