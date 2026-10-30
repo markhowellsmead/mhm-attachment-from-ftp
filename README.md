@@ -143,5 +143,8 @@ Please respect the GPL v3 licence, which is available via http://www.gnu.org/lic
 
 ## Changelog
 
+### 0.8.8
+* The plugin's repository is now hosted on GitHub: https://github.com/markhowellsmead/mhm-attachment-from-ftp (previously Bitbucket). The Plugin URI has been updated.
+
 ### 0.8.7
 * Fix: Stop overwriting the `keywords` value which WordPress core stores in the attachment's `image_meta`. Core already extracts the IPTC keywords; the plugin's own copy was unprocessed (no re-indexing or encoding handling) and could raise an undefined index warning for files with an IPTC category but no keywords.
