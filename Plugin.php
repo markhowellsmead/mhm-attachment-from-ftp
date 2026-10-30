@@ -2,11 +2,11 @@
 /*
 Plugin Name: Attachments from FTP - import from folder
 Description: Create attachment posts from files in a folder on the server.
-Plugin URI: https://bitbucket.org/markhowellsmead/mhm-attachment-from-ftp
+Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.7
+Version: 0.8.8
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
