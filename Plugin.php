@@ -6,7 +6,7 @@ Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.10
+Version: 0.9.0
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -27,6 +27,8 @@ class Plugin
 		register_deactivation_hook(__FILE__, [$this, 'deactivation']);
 
 		require_once 'OptionsPage.php';
+		require_once 'Notifications.php';
+		require_once 'LogPage.php';
 
 		$this->options = get_option('mhm_attachment_from_ftp');
 
@@ -46,14 +48,20 @@ class Plugin
 			$content = print_r($content, 1);
 		}
 		error_log(date('r') . chr(9) . $title . chr(9) . $content . chr(10), 3, WP_CONTENT_DIR . '/mhm_attachment_from_ftp.error.log');
+		Notifications::record('error', $title, $content);
 	}
 
-	private function success_log($title, $content = '')
+	/**
+	 * @param string $kind 'success' for a completed import (which can be emailed with the “success”
+	 *                     notification), or 'regular' for all other entries.
+	 */
+	private function success_log($title, $content = '', $kind = 'regular')
 	{
 		if (is_array($content)) {
 			$content = print_r($content, 1);
 		}
 		error_log(date('r') . chr(9) . $title . chr(9) . $content . chr(10), 3, WP_CONTENT_DIR . '/mhm_attachment_from_ftp.success.log');
+		Notifications::record($kind, $title, $content);
 	}
 
 	private function legibleSize($file_path, $decimals = 2)
@@ -107,6 +115,9 @@ class Plugin
 	 */
 	public function checkFolder()
 	{
+		// Send the collected notifications once the hour since the last email has passed.
+		Notifications::flush();
+
 		$this->setThings();
 
 		if (empty($this->sourceFolder) || !$this->author_id) {
@@ -201,7 +212,7 @@ class Plugin
 		}
 
 		do_action('mhm-attachment-from-ftp/finished', $entries, $processed_entries);
-		$this->success_log('mhm-attachment-from-ftp/finished', [$entries, $processed_entries]);
+		$this->success_log('mhm-attachment-from-ftp/finished', [$entries, $processed_entries], $processed_entries > 0 ? 'success' : 'regular');
 	}
 
 	/**

@@ -22,8 +22,11 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * **Post author**: the author in the website to whom new Attachments will be attributed.
 * **Number of files to process**: how many images to process in a single batch (10, 25, 50 or 100). Each file requires thumbnails to be generated, so keep this number low unless you have a high-performance server.
 * **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
+* **Notify when an error occurs**: the site administrator receives an email about errors during the import process.
+* **Notify on success**: the site administrator receives an email when files have been imported successfully.
+* **Notify on regular**: the site administrator receives an email about all events of the import process (errors and everything else which is written to the log files).
 
-The plugin does not send email notifications. Results are written to the log files ``wp-content/mhm_attachment_from_ftp.success.log`` and ``wp-content/mhm_attachment_from_ftp.error.log``.
+Notifications are sent to the site administrator email address (*Settings » General*). So that a problem which repeats every minute cannot flood your inbox, the events are collected and sent together in a single digest email, **at most once per hour**. The first event is emailed immediately. Identical events within the digest are summarised, with a count and an example. Events are always written to the log files, whether or not they are emailed.
 
 ## Notes
 * Files in subfolders of your selected folder are processed too. ``.DS_Store`` files and files which are not an allowed file type (JPEG, GIF, PNG, BMP and TIFF by default) are ignored.
@@ -43,7 +46,8 @@ The plugin does not send email notifications. Results are written to the log fil
 * IPTC keywords are stored in the attachment metadata (``image_meta['keywords']``) by WordPress core when the attachment is generated. This plugin does not add or change them. It reads the keywords from the file itself only to show them in the *Media » For import* list, and to pass them on as ``post_tags`` in the data used by the ``mhm-attachment-from-ftp/finished`` action. The IPTC category is added to the attachment metadata as ``image_meta['category']``.
 * If the file contains GPS data, the coordinates are converted to decimal values and passed on with the other import data. They are not stored by this plugin.
 * *Media » For import* lists the files which are currently waiting in the source folder, with a preview, title, keywords, GPS coordinates, camera and file size.
-* The plugin appends to two log files in ``wp-content``: ``mhm_attachment_from_ftp.success.log`` (imports and updates) and ``mhm_attachment_from_ftp.error.log`` (files which could not be processed, and configuration problems).
+* The plugin appends to two log files in ``wp-content``: ``mhm_attachment_from_ftp.success.log`` (imports and updates) and ``mhm_attachment_from_ftp.error.log`` (files which could not be processed, and configuration problems). They can be read in *Media » Import log*.
+* *Media » Import log* shows the entries of both log files, newest first, 100 per page, on the tabs *Errors* and *Success*. Long details can be expanded. The page is available to users who can manage options. The files are read from the end, so that even a large log file loads quickly. The log files are not trimmed automatically.
 * A pre-existing Attachment will be updated with the *Title* and *Caption* of the new image file. Any former, manually-edited caption or title will be overwritten unless the plugin option *Do not overwrite* is selected.
 
 ## Detailed process description
@@ -151,6 +155,10 @@ Use this code freely, widely and for free. Provision of this code provides and i
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
 
 ## Changelog
+
+### 0.9.0
+* New: *Media » Import log* shows the plugin's error and success logs, newest first, paginated with 100 entries per page.
+* New: The email notifications (*Notify when an error occurs*, *Notify on success*, *Notify on regular*) are available again, and now work. Emails are sent to the site administrator as a digest, at most once per hour, with identical events summarised.
 
 ### 0.8.10
 * Fix: The batch of files is now processed oldest first, by capture date. Previously the order depended on the image titles.
