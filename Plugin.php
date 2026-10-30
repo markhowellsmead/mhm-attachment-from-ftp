@@ -6,7 +6,7 @@ Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.8.9
+Version: 0.8.10
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -78,7 +78,7 @@ class Plugin
 		wp_clear_scheduled_hook('mhm_attachment_from_ftp_check_folder');
 	}
 
-	public function cronInterval()
+	public function cronInterval($schedules)
 	{
 		if (!isset($schedules['minute'])) {
 			$schedules['minute'] = [
@@ -145,7 +145,8 @@ class Plugin
 
 			$target_folder = WP_CONTENT_DIR . '/uploads' . date('/Y/m/', strtotime($exif['DateTimeOriginal']));
 
-			$entries[strtotime($exif['DateTime'])] = [
+			$entry_key = count($entries);
+			$entries[$entry_key] = [
 				'post_author' => $this->author_id,
 				'post_title' => (string) $exif['iptc']['graphic_name'],
 				'post_content' => (string) $exif['iptc']['caption'],
@@ -166,9 +167,9 @@ class Plugin
 			 * can access it.
 			 */
 			if (isset($exif['GPSLatitudeDecimal']) && isset($exif['GPSLongitudeDecimal']) && isset($exif['GPSCalculatedDecimal'])) {
-				$entries[strtotime($exif['DateTime'])]['post_meta']['geo_latitude'] = (float) $exif['GPSLatitudeDecimal'];
-				$entries[strtotime($exif['DateTime'])]['post_meta']['geo_longitude'] = (float) $exif['GPSLongitudeDecimal'];
-				$entries[strtotime($exif['DateTime'])]['post_meta']['location'] = (string) $exif['GPSCalculatedDecimal'];
+				$entries[$entry_key]['post_meta']['geo_latitude'] = (float) $exif['GPSLatitudeDecimal'];
+				$entries[$entry_key]['post_meta']['geo_longitude'] = (float) $exif['GPSLongitudeDecimal'];
+				$entries[$entry_key]['post_meta']['location'] = (string) $exif['GPSCalculatedDecimal'];
 			}
 		}
 
@@ -178,8 +179,8 @@ class Plugin
 			exit;
 		}
 
-		// Handle older photos first, sorted by EXIF DateTime parameter.
-		sort($entries);
+		// Handle older photos first, sorted by the original capture date.
+		$entries = $this->sortEntriesByDate($entries);
 
 		// Limit the amount of photos parsed in one run.
 		$per_batch = (int) $this->options['files_per_batch'];
@@ -201,6 +202,22 @@ class Plugin
 
 		do_action('mhm-attachment-from-ftp/finished', $entries, $processed_entries);
 		$this->success_log('mhm-attachment-from-ftp/finished', [$entries, $processed_entries]);
+	}
+
+	/**
+	 * Sort the entries so that the photos which were taken first come first.
+	 *
+	 * @param array $entries The entries built in checkFolder().
+	 *
+	 * @return array The entries, sorted by file_date and re-indexed.
+	 */
+	private function sortEntriesByDate($entries)
+	{
+		usort($entries, function ($a, $b) {
+			return strtotime($a['file_date']) <=> strtotime($b['file_date']);
+		});
+
+		return $entries;
 	}
 
 	/**
@@ -819,7 +836,7 @@ class Plugin
 
 		register_rest_field('post', 'location', [
 			'get_callback' => function ($args) {
-				return get_post_meta($args['id'], 'video_ref', true);
+				return get_post_meta($args['id'], 'location', true);
 			},
 			'update_callback' => function ($value, $post) {
 				if (get_post_meta($post->ID, 'location', true) === $value) {

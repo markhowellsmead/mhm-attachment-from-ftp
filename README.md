@@ -22,11 +22,12 @@ As this plugin works with existing WordPress data in the database, and moves fil
 * **Post author**: the author in the website to whom new Attachments will be attributed.
 * **Number of files to process**: how many images to process in a single batch (10, 25, 50 or 100). Each file requires thumbnails to be generated, so keep this number low unless you have a high-performance server.
 * **Do not overwrite existing titles or descriptions**: if an Attachment already exists for the new file, then don't overwrite the title, the caption or the description when updating with the new file. Default: OFF. (Title and description will be overwritten, even if the new title and description are empty.)
-* **Notify when an error occurs**, **Notify on success**, **Notify on regular**: these settings are saved, but are not currently used by the plugin and no emails are sent. Results are written to the log files. (See *Log files*.)
+
+The plugin does not send email notifications. Results are written to the log files ``wp-content/mhm_attachment_from_ftp.success.log`` and ``wp-content/mhm_attachment_from_ftp.error.log``.
 
 ## Notes
 * Files in subfolders of your selected folder are processed too. ``.DS_Store`` files and files which are not an allowed file type (JPEG, GIF, PNG, BMP and TIFF by default) are ignored.
-* The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.) The order in which files are processed is not guaranteed; do not rely on older photos being processed first.
+* The total number of files processed in a single run is limited. (See *Number of files to process* in the plugin options.) Files are processed in the order in which the photos were taken (``DateTimeOriginal``), oldest first.
 * Files larger than 10 MB are not processed and remain in the original folder.
 * Uploaded files must contain regular EXIF data relating to capture date.
 * The uploaded file may optionally - ideally - contain values for image title and image caption/description. In Adobe Lightroom, this information is edited using the fields *Title* and *Caption* (in the *EXIF and IPTC* view of the *Metadata* panel).
@@ -150,6 +151,13 @@ Use this code freely, widely and for free. Provision of this code provides and i
 Please respect the GPL v3 licence, which is available via http://www.gnu.org/licenses/gpl-3.0.html
 
 ## Changelog
+
+### 0.8.10
+* Fix: The batch of files is now processed oldest first, by capture date. Previously the order depended on the image titles.
+* Fix: Two photos with exactly the same capture time are now both processed. Previously one of them replaced the other.
+* Fix: The custom cron interval ``minute`` no longer replaces all other cron schedules registered by WordPress and other plugins.
+* Fix: The REST API field ``location`` returned the value of ``video_ref``.
+* Removed: The *Notify when an error occurs*, *Notify on success* and *Notify on regular* options. They were saved but never used, and no emails were ever sent.
 
 ### 0.8.9
 * Documentation: The README now matches the behaviour of the plugin. Corrections: the cron task runs every minute (not hourly) and the hook name is ``mhm_attachment_from_ftp_check_folder``; subfolders are processed; files are not guaranteed to be processed oldest first; the *Notify…* options are not currently used; the arguments of three actions. Added the file size limit, the *For import* page, log files, how titles, keywords and GPS data are handled, and the REST fields.
