@@ -75,7 +75,36 @@ class OptionsPage
                     </p>
                 </td>
             </tr>
+            <tr valign="top">
+                <th scope="row">' . __('Notify when an error occurs', 'mhm_attachment_from_ftp') . '</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_error]" value="1" ' . checked((bool) $options['notify_error'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email when an error occurs during the import process.', 'mhm_attachment_from_ftp') . '
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">' . __('Notify on success', 'mhm_attachment_from_ftp') . '</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_success]" value="1" ' . checked((bool) $options['notify_success'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email when the import process is successful.', 'mhm_attachment_from_ftp') . '
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">' . __('Notify on regular', 'mhm_attachment_from_ftp') . '</th>
+                <td>
+                    <p class="description">
+                        <input type="checkbox" name="mhm_attachment_from_ftp[notify_regular]" value="1" ' . checked((bool) $options['notify_regular'], true, false) . ' />
+                        ' . __('If this checkbox is selected, the site administrator will receive an email for all actions within the import process.', 'mhm_attachment_from_ftp') . '
+                    </p>
+                </td>
+            </tr>
         </table>';
+
+		echo '<p class="description">' . __('To avoid a flood of emails, all notifications are collected and sent together in a single email, at most once per hour. Identical events are summarised with a count. The emails are sent to the site administrator email address.', 'mhm_attachment_from_ftp') . ' <a href="' . esc_url(admin_url('upload.php?page=mhm_attachment_from_ftp_log')) . '">' . __('View the import log', 'mhm_attachment_from_ftp') . '</a></p>';
 
 		submit_button();
 
