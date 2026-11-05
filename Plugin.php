@@ -6,7 +6,7 @@ Plugin URI: https://github.com/markhowellsmead/mhm-attachment-from-ftp
 Text Domain: mhm-attachment-from-ftp
 Author: Mark Howells-Mead
 Author URI: https://permanenttourist.ch/
-Version: 0.9.2
+Version: 0.9.3
 */
 
 namespace MHM\WordPress\AttachmentFromFtp;
@@ -187,7 +187,7 @@ class Plugin
 		if (empty($entries)) {
 			do_action('mhm-attachment-from-ftp/no_valid_entries', $this->sourceFolder, $files);
 			$this->error_log('mhm-attachment-from-ftp/no_valid_entries', [$this->sourceFolder, $files]);
-			exit;
+			return;
 		}
 
 		// Handle older photos first, sorted by the original capture date.
