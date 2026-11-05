@@ -156,6 +156,9 @@ Please respect the GPL v3 licence, which is available via http://www.gnu.org/lic
 
 ## Changelog
 
+### 0.9.3
+* Fix: `checkFolder()` no longer calls `exit` when no file in the source folder is valid, which aborted the entire WP-Cron run. It now returns instead (issue #1).
+
 ### 0.9.2
 * New: *Media » Import log* has a filter to choose which types of entries are displayed, with the number of entries of each type.
 
